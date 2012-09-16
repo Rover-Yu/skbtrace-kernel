@@ -1,0 +1,213 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>4. 跟踪事件列表 &mdash; Skbtrace v20120916 documentation</title>
+    <link rel="stylesheet" href="../static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '20120916',
+        COLLAPSE_MODINDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within Skbtrace v20120916 documentation"
+          href="../static/opensearch.xml"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="Skbtrace v20120916 documentation" href="../index.html" />
+    <link rel="up" title="The Skbtace User Manual" href="index.html" />
+    <link rel="next" title="HOWTOs" href="../howto/index.html" />
+    <link rel="prev" title="3. 命令行选项" href="options.html" />
+    <link rel="shortcut icon" type="image/png" href="../static/py.png" />
+ 
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../howto/index.html" title="HOWTOs"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="options.html" title="3. 命令行选项"
+             accesskey="P">previous</a> |</li>
+        <li><img src="../_static/py.png" alt=""
+                 style="vertical-align: middle; margin-top: -1px"/></li>
+        <li><a href="../index.html">Skbtrace v20120916 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" accesskey="U">The Skbtace User Manual</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="events">
+<span id="id1"></span><h1>4. 跟踪事件列表<a class="headerlink" href="#events" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id2">
+<h2>4.1. 事件选项<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<p>许多事件都有控制其具体行为的选项。例如，tcp_congestion事件可以用mask过滤掉那些不感兴趣的拥塞事件。</p>
+<p>而且还有一些所有事件都支持的公共选项。</p>
+<div class="section" id="primary">
+<h3>4.1.1. primary<a class="headerlink" href="#primary" title="Permalink to this headline">¶</a></h3>
+<p>默认情况下，skbtrace对于所有事件都是独立对待的，也就是你启用了它，并且通过了各种过滤器设置，skbtrace就把它们会记录下来。但在有些情况下，这种简化的模型导致了很多没有价值的事件被记录了下来。</p>
+<p>有些条件下，我们可能需要这种行为。只有事件A发生了，它之前发生的事件B对我们才有价值。也就是说，只有事件A发生了，记录事件B的才有价值。这种场景了，我们称事件A为“主事件”，事件B为”从事件“。primary选项的用途，就是指定主事件名称。</p>
+<p>例如，在skbtrace的-e用法时，如果我们指定了-e tcp_rttm,primary=tcp_congestion，就意味着，只有在发生了tcp_congestion时，才会将它之前发生的tcp_rttm事件从内核的缓冲中记录下来。</p>
+<p>目前实现的限制是：一个主事件可以对应多个从事件，但每个从事件只能从属于一个主事件。最多可记录32个从事件。</p>
+</div>
+</div>
+<div class="section" id="id3">
+<h2>4.2. 通用事件<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="skb-rps-info">
+<h3>4.2.1. skb_rps_info<a class="headerlink" href="#skb-rps-info" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+显示RPS的散列信息。</blockquote>
+</div>
+</div>
+<div class="section" id="tcp">
+<h2>4.3. TCP<a class="headerlink" href="#tcp" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="tcp-congestion">
+<h3>4.3.1. tcp_congestion<a class="headerlink" href="#tcp-congestion" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+TCP拥塞事件。</blockquote>
+</div>
+<div class="section" id="tcp-connection">
+<h3>4.3.2. tcp_connection<a class="headerlink" href="#tcp-connection" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+基本TCP状态迁移事件。</blockquote>
+</div>
+<div class="section" id="icsk-connection">
+<h3>4.3.3. icsk_connection<a class="headerlink" href="#icsk-connection" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+X</blockquote>
+</div>
+<div class="section" id="tcp-sendlimit">
+<h3>4.3.4. tcp_sendlimit<a class="headerlink" href="#tcp-sendlimit" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+TCP停止发送事件。</blockquote>
+</div>
+<div class="section" id="tcp-ca-state">
+<h3>4.3.5. tcp_ca_state<a class="headerlink" href="#tcp-ca-state" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+X</blockquote>
+</div>
+<div class="section" id="tcp-rttm">
+<h3>4.3.6. tcp_rttm<a class="headerlink" href="#tcp-rttm" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+X</blockquote>
+</div>
+<div class="section" id="sk-timer">
+<h3>4.3.7. sk_timer<a class="headerlink" href="#sk-timer" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+X</blockquote>
+</div>
+<div class="section" id="tcp-active-conn">
+<h3>4.3.8. tcp_active_conn<a class="headerlink" href="#tcp-active-conn" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../contents.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference external" href="">4. 跟踪事件列表</a><ul>
+<li><a class="reference external" href="#id2">4.1. 事件选项</a><ul>
+<li><a class="reference external" href="#primary">4.1.1. primary</a></li>
+</ul>
+</li>
+<li><a class="reference external" href="#id3">4.2. 通用事件</a><ul>
+<li><a class="reference external" href="#skb-rps-info">4.2.1. skb_rps_info</a></li>
+</ul>
+</li>
+<li><a class="reference external" href="#tcp">4.3. TCP</a><ul>
+<li><a class="reference external" href="#tcp-congestion">4.3.1. tcp_congestion</a></li>
+<li><a class="reference external" href="#tcp-connection">4.3.2. tcp_connection</a></li>
+<li><a class="reference external" href="#icsk-connection">4.3.3. icsk_connection</a></li>
+<li><a class="reference external" href="#tcp-sendlimit">4.3.4. tcp_sendlimit</a></li>
+<li><a class="reference external" href="#tcp-ca-state">4.3.5. tcp_ca_state</a></li>
+<li><a class="reference external" href="#tcp-rttm">4.3.6. tcp_rttm</a></li>
+<li><a class="reference external" href="#sk-timer">4.3.7. sk_timer</a></li>
+<li><a class="reference external" href="#tcp-active-conn">4.3.8. tcp_active_conn</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="options.html"
+                                  title="previous chapter">3. 命令行选项</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="../howto/index.html"
+                                  title="next chapter">HOWTOs</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../sources/using/events.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../howto/index.html" title="HOWTOs"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="options.html" title="3. 命令行选项"
+             >previous</a> |</li>
+        <li><img src="../_static/py.png" alt=""
+                 style="vertical-align: middle; margin-top: -1px"/></li>
+        <li><a href="../index.html">Skbtrace v20120916 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" >The Skbtace User Manual</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+    &copy; <a href="../copyright.html">Copyright</a> 2012, Li Yu.
+    <br />
+    Last updated on Sep 16, 2012.
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.6.2.
+    </div>
+
+  </body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>2. 编译 &mdash; Skbtrace v20120916 documentation</title>
+    <link rel="stylesheet" href="../static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '20120916',
+        COLLAPSE_MODINDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within Skbtrace v20120916 documentation"
+          href="../static/opensearch.xml"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="Skbtrace v20120916 documentation" href="../index.html" />
+    <link rel="up" title="The Skbtace User Manual" href="index.html" />
+    <link rel="next" title="3. 命令行选项" href="options.html" />
+    <link rel="prev" title="1. 介绍" href="introduction.html" />
+    <link rel="shortcut icon" type="image/png" href="../static/py.png" />
+ 
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="options.html" title="3. 命令行选项"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="introduction.html" title="1. 介绍"
+             accesskey="P">previous</a> |</li>
+        <li><img src="../_static/py.png" alt=""
+                 style="vertical-align: middle; margin-top: -1px"/></li>
+        <li><a href="../index.html">Skbtrace v20120916 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" accesskey="U">The Skbtace User Manual</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="building">
+<span id="id1"></span><h1>2. 编译<a class="headerlink" href="#building" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="skbtrace">
+<h2>2.1. 编译skbtrace内核<a class="headerlink" href="#skbtrace" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>安装git</li>
+<li>在一个空目录下运行：git clone git://github.com/Rover-Yu/skbtrace-kernel.git skbtrace-kernel.git</li>
+<li>cd skbtrace-kernel.git</li>
+<li>配置内核，确保启用内核配置CONFIG_SKBTRACE和CONFIG_SKBTRACE_IPV4。</li>
+<li>编译安装内核，重启系统。</li>
+</ul>
+</div>
+<div class="section" id="id2">
+<h2>2.2. 编译skbtrace用户空间工具<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>在一个空目录下运行：git clone git://github.com/Rover-Yu/skbtrace-userland.git skbtrace-userland.git</li>
+<li>cd skbtrace-userland.git</li>
+<li>make，它会生成skbtrace <a class="footnote-reference" href="#id5" id="id3">[1]</a> 和skbparse <a class="footnote-reference" href="#id6" id="id4">[2]</a> 。</li>
+</ul>
+<p class="rubric">注</p>
+<table class="docutils footnote" frame="void" id="id5" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id3">[1]</a></td><td>skbtrace, 这个工具将内核记录的协议栈跟踪事件记录在磁盘上。</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id6" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id4">[2]</a></td><td>skbparse, 这个工具将skbtrace记录的跟踪数据解析成更易读的文本格式。</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../contents.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference external" href="">2. 编译</a><ul>
+<li><a class="reference external" href="#skbtrace">2.1. 编译skbtrace内核</a></li>
+<li><a class="reference external" href="#id2">2.2. 编译skbtrace用户空间工具</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="introduction.html"
+                                  title="previous chapter">1. 介绍</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="options.html"
+                                  title="next chapter">3. 命令行选项</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../sources/using/building.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="options.html" title="3. 命令行选项"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="introduction.html" title="1. 介绍"
+             >previous</a> |</li>
+        <li><img src="../_static/py.png" alt=""
+                 style="vertical-align: middle; margin-top: -1px"/></li>
+        <li><a href="../index.html">Skbtrace v20120916 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" >The Skbtace User Manual</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+    &copy; <a href="../copyright.html">Copyright</a> 2012, Li Yu.
+    <br />
+    Last updated on Sep 16, 2012.
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.6.2.
+    </div>
+
+  </body>
+</html>
