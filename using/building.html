@@ -60,10 +60,11 @@
             
   <div class="section" id="building">
 <span id="id1"></span><h1>2. 编译<a class="headerlink" href="#building" title="Permalink to this headline">¶</a></h1>
+<p>目前skbtrace还在开发中，编译它需要先安装git，以便从github的代码仓库中获取源代码。</p>
+<p>另外，编译用户空间工具时，需要libpcap的开发包（Redhat系统上的libpcap-devel，Debian/Ubuntu上的libpcap-dev）。</p>
 <div class="section" id="skbtrace">
 <h2>2.1. 编译skbtrace内核<a class="headerlink" href="#skbtrace" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>安装git</li>
 <li>在一个空目录下运行：git clone git://github.com/Rover-Yu/skbtrace-kernel.git skbtrace-kernel.git</li>
 <li>cd skbtrace-kernel.git</li>
 <li>配置内核，确保启用内核配置CONFIG_SKBTRACE和CONFIG_SKBTRACE_IPV4。</li>
@@ -158,7 +159,7 @@
     <div class="footer">
     &copy; <a href="../copyright.html">Copyright</a> 2012, Li Yu.
     <br />
-    Last updated on Sep 16, 2012.
+    Last updated on Sep 17, 2012.
     Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.6.2.
     </div>
 

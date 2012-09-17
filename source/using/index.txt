@@ -4,10 +4,10 @@
   The Skbtace User Manual
 #################################
 
-:Release: |version|
+:Release: |release|
 :Date: |today|
 
-This user manual describes all userland using details of skbtrace.
+本手册描述skbtrace用户空间工具的使用方法。
 
 .. toctree::
    :maxdepth: 2

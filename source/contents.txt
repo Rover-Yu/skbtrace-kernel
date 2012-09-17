@@ -8,6 +8,7 @@
    tutorial/index.rst
    using/index.rst
    howto/index.rst
+   extending/index.rst
    glossary.rst
 
    about.rst

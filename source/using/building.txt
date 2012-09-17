@@ -5,16 +5,19 @@
 编译
 **************
 
+目前skbtrace还在开发中，编译它需要先安装git，以便从github的代码仓库中获取源代码。
+
+另外，编译用户空间工具时，需要libpcap的开发包（Redhat系统上的libpcap-devel，Debian/Ubuntu上的libpcap-dev）。
+
 编译skbtrace内核
-===========
-* 安装git
+==================
 * 在一个空目录下运行：git clone git://github.com/Rover-Yu/skbtrace-kernel.git skbtrace-kernel.git
 * cd skbtrace-kernel.git
 * 配置内核，确保启用内核配置CONFIG_SKBTRACE和CONFIG_SKBTRACE_IPV4。
 * 编译安装内核，重启系统。
 
 编译skbtrace用户空间工具
-============
+==========================
 * 在一个空目录下运行：git clone git://github.com/Rover-Yu/skbtrace-userland.git skbtrace-userland.git
 * cd skbtrace-userland.git
 * make，它会生成skbtrace [#]_ 和skbparse [#]_ 。
