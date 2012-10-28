@@ -5,7 +5,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>2. 编译 &mdash; Skbtrace v20120916 documentation</title>
+    <title>2. Building &mdash; Skbtrace v20120916 documentation</title>
     <link rel="stylesheet" href="../static/default.css" type="text/css" />
     <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -26,8 +26,8 @@
     <link rel="copyright" title="Copyright" href="../copyright.html" />
     <link rel="top" title="Skbtrace v20120916 documentation" href="../index.html" />
     <link rel="up" title="The Skbtace User Manual" href="index.html" />
-    <link rel="next" title="3. 命令行选项" href="options.html" />
-    <link rel="prev" title="1. 介绍" href="introduction.html" />
+    <link rel="next" title="3. Command line options" href="options.html" />
+    <link rel="prev" title="1. Introduction" href="introduction.html" />
     <link rel="shortcut icon" type="image/png" href="../static/py.png" />
  
 
@@ -40,10 +40,10 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="options.html" title="3. 命令行选项"
+          <a href="options.html" title="3. Command line options"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="introduction.html" title="1. 介绍"
+          <a href="introduction.html" title="1. Introduction"
              accesskey="P">previous</a> |</li>
         <li><img src="../_static/py.png" alt=""
                  style="vertical-align: middle; margin-top: -1px"/></li>
@@ -59,36 +59,60 @@
           <div class="body">
             
   <div class="section" id="building">
-<span id="id1"></span><h1>2. 编译<a class="headerlink" href="#building" title="Permalink to this headline">¶</a></h1>
-<p>目前skbtrace还在开发中，编译它需要先安装git，以便从github的代码仓库中获取源代码。</p>
-<p>另外，编译用户空间工具时，需要libpcap的开发包（Redhat系统上的libpcap-devel，Debian/Ubuntu上的libpcap-dev）。</p>
-<div class="section" id="skbtrace">
-<h2>2.1. 编译skbtrace内核<a class="headerlink" href="#skbtrace" title="Permalink to this headline">¶</a></h2>
-<ul class="simple">
-<li>在一个空目录下运行：git clone git://github.com/Rover-Yu/skbtrace-kernel.git skbtrace-kernel.git</li>
-<li>cd skbtrace-kernel.git</li>
-<li>配置内核，确保启用内核配置CONFIG_SKBTRACE和CONFIG_SKBTRACE_IPV4。</li>
-<li>编译安装内核，重启系统。</li>
+<span id="id1"></span><h1>2. Building<a class="headerlink" href="#building" title="Permalink to this headline">¶</a></h1>
+<p>This proejct still is under development, to use it you have to download source code from github.com manually.</p>
+<dl class="docutils">
+<dt>To build it, you need to prepare follow steps first:</dt>
+<dd><ul class="first last simple">
+<li>Install git, for sources download.</li>
+<li>Install libpcap and its development package for user space utility build. They are RPM package libpcap-devel on Redhat series distributions, or DEB package libpcap-dev on Debian based distributions.</li>
+</ul>
+</dd>
+</dl>
+<div class="section" id="build-patched-kernel">
+<h2>2.1. Build patched kernel<a class="headerlink" href="#build-patched-kernel" title="Permalink to this headline">¶</a></h2>
+<p>Current source is based on upstream v3.6 kernel.</p>
+<p>Steps:</p>
+<ul>
+<li><p class="first">Download kernel sources by run &#8220;git clone git://github.com/Rover-Yu/skbtrace-kernel.git skbtrace-kernel.git&#8221;</p>
+</li>
+<li><p class="first">cd skbtrace-kernel.git</p>
+</li>
+<li><dl class="first docutils">
+<dt>Build kernel, please make sure below below configuration items are enabled:</dt>
+<dd><ul class="first last simple">
+<li>CONFIG_SKBTRACE</li>
+<li>CONFIG_SKBTRACE_IPV4</li>
+<li>CONFIG_SKBTRACE_IPV6</li>
+<li>(Optional, recommended) CONFIG_JUMP_LABEL</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">Install built binary as upstream kernel, reboot your system, good luck.</p>
+</li>
 </ul>
 </div>
-<div class="section" id="id2">
-<h2>2.2. 编译skbtrace用户空间工具<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="build-user-space-utilities">
+<h2>2.2. Build user space utilities<a class="headerlink" href="#build-user-space-utilities" title="Permalink to this headline">¶</a></h2>
+<p>Steps:</p>
 <ul class="simple">
-<li>在一个空目录下运行：git clone git://github.com/Rover-Yu/skbtrace-userland.git skbtrace-userland.git</li>
+<li>Download userland utilies sources by &#8220;git clone git://github.com/Rover-Yu/skbtrace-userland.git skbtrace-userland.git&#8221;</li>
 <li>cd skbtrace-userland.git</li>
-<li>make，它会生成skbtrace <a class="footnote-reference" href="#id5" id="id3">[1]</a> 和skbparse <a class="footnote-reference" href="#id6" id="id4">[2]</a> 。</li>
+<li>make</li>
 </ul>
-<p class="rubric">注</p>
+<p>After above steps are done，you should get skbtrace <a class="footnote-reference" href="#id4" id="id2">[1]</a> and skbparse <a class="footnote-reference" href="#id5" id="id3">[2]</a></p>
+<p class="rubric">Notes</p>
+<table class="docutils footnote" frame="void" id="id4" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id2">[1]</a></td><td>skbtrace, this utility is used to record traced binary data from kernel into some files</td></tr>
+</tbody>
+</table>
 <table class="docutils footnote" frame="void" id="id5" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id3">[1]</a></td><td>skbtrace, 这个工具将内核记录的协议栈跟踪事件记录在磁盘上。</td></tr>
-</tbody>
-</table>
-<table class="docutils footnote" frame="void" id="id6" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id4">[2]</a></td><td>skbparse, 这个工具将skbtrace记录的跟踪数据解析成更易读的文本格式。</td></tr>
+<tr><td class="label"><a class="fn-backref" href="#id3">[2]</a></td><td>skbparse, this utility is used to parse binary traced data into human readable text form.</td></tr>
 </tbody>
 </table>
 </div>
@@ -102,19 +126,19 @@
         <div class="sphinxsidebarwrapper">
             <h3><a href="../contents.html">Table Of Contents</a></h3>
             <ul>
-<li><a class="reference external" href="">2. 编译</a><ul>
-<li><a class="reference external" href="#skbtrace">2.1. 编译skbtrace内核</a></li>
-<li><a class="reference external" href="#id2">2.2. 编译skbtrace用户空间工具</a></li>
+<li><a class="reference external" href="">2. Building</a><ul>
+<li><a class="reference external" href="#build-patched-kernel">2.1. Build patched kernel</a></li>
+<li><a class="reference external" href="#build-user-space-utilities">2.2. Build user space utilities</a></li>
 </ul>
 </li>
 </ul>
 
             <h4>Previous topic</h4>
             <p class="topless"><a href="introduction.html"
-                                  title="previous chapter">1. 介绍</a></p>
+                                  title="previous chapter">1. Introduction</a></p>
             <h4>Next topic</h4>
             <p class="topless"><a href="options.html"
-                                  title="next chapter">3. 命令行选项</a></p>
+                                  title="next chapter">3. Command line options</a></p>
             <h3>This Page</h3>
             <ul class="this-page-menu">
               <li><a href="../sources/using/building.txt"
@@ -144,10 +168,10 @@
           <a href="../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="options.html" title="3. 命令行选项"
+          <a href="options.html" title="3. Command line options"
              >next</a> |</li>
         <li class="right" >
-          <a href="introduction.html" title="1. 介绍"
+          <a href="introduction.html" title="1. Introduction"
              >previous</a> |</li>
         <li><img src="../_static/py.png" alt=""
                  style="vertical-align: middle; margin-top: -1px"/></li>
@@ -159,7 +183,7 @@
     <div class="footer">
     &copy; <a href="../copyright.html">Copyright</a> 2012, Li Yu.
     <br />
-    Last updated on Sep 17, 2012.
+    Last updated on Oct 28, 2012.
     Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.6.2.
     </div>
 

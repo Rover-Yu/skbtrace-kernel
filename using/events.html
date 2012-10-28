@@ -5,7 +5,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>4. 跟踪事件列表 &mdash; Skbtrace v20120916 documentation</title>
+    <title>4. Trace events list &mdash; Skbtrace v20120916 documentation</title>
     <link rel="stylesheet" href="../static/default.css" type="text/css" />
     <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -27,7 +27,7 @@
     <link rel="top" title="Skbtrace v20120916 documentation" href="../index.html" />
     <link rel="up" title="The Skbtace User Manual" href="index.html" />
     <link rel="next" title="HOWTOs" href="../howto/index.html" />
-    <link rel="prev" title="3. 命令行选项" href="options.html" />
+    <link rel="prev" title="3. Command line options" href="options.html" />
     <link rel="shortcut icon" type="image/png" href="../static/py.png" />
  
 
@@ -43,7 +43,7 @@
           <a href="../howto/index.html" title="HOWTOs"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="options.html" title="3. 命令行选项"
+          <a href="options.html" title="3. Command line options"
              accesskey="P">previous</a> |</li>
         <li><img src="../_static/py.png" alt=""
                  style="vertical-align: middle; margin-top: -1px"/></li>
@@ -58,165 +58,337 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="events">
-<span id="id1"></span><h1>4. 跟踪事件列表<a class="headerlink" href="#events" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id2">
-<h2>4.1. 事件选项<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
-<p>许多事件都有控制其具体行为的选项。例如，tcp_congestion事件可以用mask过滤掉那些不感兴趣的拥塞事件。</p>
-<p>还有一些公共选项是所有事件都支持的。</p>
+  <div class="section" id="trace-events-list">
+<span id="events"></span><h1>4. Trace events list<a class="headerlink" href="#trace-events-list" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="options">
+<h2>4.1. Options<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h2>
+<p>The event options are used to tune conditions of events occur, e.g, if we did not care CWR then we can skip them by give mask=CWR option of tcp_congestion event.</p>
+<p>Below are all common options.</p>
+<div class="section" id="mask">
+<h3>4.1.1. mask<a class="headerlink" href="#mask" title="Permalink to this headline">¶</a></h3>
+<p>Not all events support this option.</p>
+<p>This option can be used to skip some uninterested event conditions, e.g, the tcp_congestion event occurs on TCP feels networks is overloaded, the possible conditions are CWR, FRTO, Fast Retransmitation, Loss, FRTO-Loss. If we only care that segments loss conditions, then we can use follow command line option of skbtrace:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span class="o">-</span><span class="n">e</span> <span class="n">tcp_congestion</span><span class="p">,</span><span class="n">mask</span><span class="o">=</span><span class="n">CWR</span><span class="p">:</span><span class="n">FRTO</span><span class="p">:</span><span class="n">FastRtx</span>
+</pre></div>
+</div>
+<p>So CWR, FRTO and Fast Retransmitation events do not be recorded at disk.</p>
+</div>
 <div class="section" id="primary">
-<h3>4.1.1. primary<a class="headerlink" href="#primary" title="Permalink to this headline">¶</a></h3>
-<p>默认情况下，skbtrace对于所有事件都是独立对待的————也就是说，如果你启用了它，并且成功通过了各种过滤操作，skbtrace工具就把它们会记录到磁盘上。很多时候，这个简单模型可以工作得很好，但在有些情况下，它也记录下了很多没有价值的事件。</p>
-<p>有时候我们希望记录的事件更有针对性一些，例如，我们只关心在事件A发生之前的事件B的情况，也就是说，只有在发生了事件A发生的时候，记录之前的事件B才有价值。在这种场景下，在skbtrace里，称事件A为“主事件”，事件B为”从事件“。primary选项的用途，就是建立起主从事件的关联。</p>
-<p>例如，使用skbtrace的-e选项时，如果指定了-e tcp_rttm,primary=tcp_congestion，就意味着，只有在发生了tcp_congestion时，才会将它之前发生的tcp_rttm事件从内核的缓冲中记录下来。即tcp_rttm是从事件，tcp_congestion是主事件。</p>
-<p>目前实现的限制是：一个主事件可以对应多个从事件，但每个从事件只能从属于一个主事件。最多可记录32个从事件。</p>
+<h3>4.1.2. primary<a class="headerlink" href="#primary" title="Permalink to this headline">¶</a></h3>
+<p>By default, all trace events are treated independently. that is, if you enabled it and they are successfully passed a variety of BPF filter operations, then skbtrace will record them to disk. In many cases, this simple model works well, but these events passed through BPF filters still result in a lot of bytes mixed much valueless and some valuable data in some cases.</p>
+<p>We hope record the event more targeted by create dependency among events, we only care about the event A if and only if any of event B are occured later, that is, it is only valuable to record occured events A before event B occured. In this scenario, we called event B as the &#8220;primary event&#8221; of event A. The primary option is used to establish this kind of association among one primary event and some slave events.</p>
+<p>For example, if we wanted to verify whether significant jitter of RTT can be used to predict possible TCP segments loss, then we may use below command line option of skbtrace:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span class="o">-</span><span class="n">e</span> <span class="n">tcp_rttm</span><span class="p">,</span><span class="n">primary</span><span class="o">=</span><span class="n">tcp_congestion</span> <span class="o">-</span><span class="n">e</span> <span class="n">tcp_congestion</span><span class="p">,</span><span class="n">mask</span><span class="o">=</span><span class="n">CWR</span><span class="p">:</span><span class="n">FRTO</span><span class="p">:</span><span class="n">FastRtx</span>
+</pre></div>
+</div>
+<p>In above example, tcp_rttm is a slave event, tcp_congestion is its primary event. Only tcp_rttm events that occured before tcp_congestion will be recorded on disks.</p>
+<p>The limitation of current implementaton: a primary event can correspond to multiple slave events, but a event can not be as slave event of mulitple primary events at same time.</p>
+<p>You can record up to 32 slave events.</p>
 </div>
 </div>
-<div class="section" id="id3">
-<h2>4.2. 通用事件<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="skb-rps-info">
-<h3>4.2.1. skb_rps_info<a class="headerlink" href="#skb-rps-info" title="Permalink to this headline">¶</a></h3>
-<blockquote>
-<p>这是一个基于报文的事件，因此需要使用-F选项过滤。</p>
-<p>显示RPS的散列信息。我们知道RPS可以看作是软件模拟实现的RSS。本质是根据报文内容做散列和映射，将相同连接的报文分发到同一个处理器上。
-这个事件可以显示出RPS用于计算散列计算时的“数据源”。</p>
-<p>一个skbparse解析后的例子</p>
+<div class="section" id="common-events">
+<h2>4.2. Common events<a class="headerlink" href="#common-events" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="common-parsed-fields">
+<h3>4.2.1. Common parsed fields<a class="headerlink" href="#common-parsed-fields" title="Permalink to this headline">¶</a></h3>
+<p>We will introduce many events, we use skb_rps_info as example to describe common parsed fields:</p>
 <div class="highlight-python3"><div class="highlight"><pre><span class="mi">144574</span> <span class="mf">1347852135.451990372</span> <span class="n">action</span><span class="o">=</span><span class="n">rps_info</span> <span class="n">skb</span><span class="o">=</span><span class="mh">0xffff880037c7f4c0</span> <span class="n">rx</span><span class="o">-</span><span class="n">queue</span><span class="o">=</span><span class="mi">0</span> <span class="n">rx</span><span class="o">-</span><span class="nb">hash</span><span class="o">=</span><span class="mh">0x0</span> <span class="n">cpu</span><span class="o">=</span><span class="mh">0xffffffff</span> <span class="n">ifindex</span><span class="o">=</span><span class="mi">1</span> <span class="n">src</span><span class="o">=</span><span class="mi">100007</span><span class="n">f</span> <span class="n">dst</span><span class="o">=</span><span class="mi">100007</span><span class="n">f</span> <span class="n">sport</span><span class="o">=</span><span class="mi">12865</span> <span class="n">dport</span><span class="o">=</span><span class="mi">41223</span> <span class="n">proto</span><span class="o">=</span><span class="mh">0x6</span>
 </pre></div>
 </div>
+<p>Fields：</p>
+<blockquote>
+<ul class="simple">
+<li>144574                    - sequence, each event has a unique sequence number, the events that have small value of sequence number ocurr before events that have big one.</li>
+<li>1347852135.451990372      - time stamp (Unit: second)</li>
+<li>action=rps_info           - event name, name is &#8220;rps_info&#8221; here.</li>
+<li>skb=0xffff880037c7f4c0 (or sk=0x.....)    - the memory address of data structure triggers this event. e.g, we may use this magic number to find out further information of corresponding TCP connection.</li>
+</ul>
+</blockquote>
+</div>
+<div class="section" id="skb-rps-info">
+<h3>4.2.2. skb_rps_info<a class="headerlink" href="#skb-rps-info" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<p>Type: packet based event (Need -F option to filter it)
+Common options: primary</p>
+<p>To show hash details of RPS. As we know, RPS dispatch received packets onto different processors by hashing packets header.</p>
+<p>An example of parsed example:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span class="mi">144574</span> <span class="mf">1347852135.451990372</span> <span class="n">action</span><span class="o">=</span><span class="n">rps_info</span> <span class="n">skb</span><span class="o">=</span><span class="mh">0xffff880037c7f4c0</span> <span class="n">rx</span><span class="o">-</span><span class="n">queue</span><span class="o">=</span><span class="mi">0</span> <span class="n">rx</span><span class="o">-</span><span class="nb">hash</span><span class="o">=</span><span class="mh">0x0</span> <span class="n">cpu</span><span class="o">=</span><span class="mh">0xffffffff</span> <span class="n">ifindex</span><span class="o">=</span><span class="mi">1</span> <span class="n">src</span><span class="o">=</span><span class="mi">100007</span><span class="n">f</span> <span class="n">dst</span><span class="o">=</span><span class="mi">100007</span><span class="n">f</span> <span class="n">sport</span><span class="o">=</span><span class="mi">12865</span> <span class="n">dport</span><span class="o">=</span><span class="mi">41223</span> <span class="n">proto</span><span class="o">=</span><span class="mh">0x6</span>
+</pre></div>
+</div>
+<p>Fields:</p>
+<blockquote>
+<ul class="simple">
+<li>rx-queue=0        - the rx queue of NIC.</li>
+<li>rx-hash=0x0       - computed key of RPS hash.</li>
+<li>cpu=0xffffffff    - target CPU.</li>
+<li>ifindex=1         - the index of NIC.</li>
+<li>src=100007f       - source address, in network byte order.</li>
+<li>dst=100007f       - destination address, in network byte order.</li>
+<li>sport=12865       - source port, in host byte order.</li>
+<li>dport=41223       - destination port, in host byte order.</li>
+<li>proto=0x6         - protocol number.</li>
+</ul>
+</blockquote>
 </blockquote>
 </div>
 </div>
 <div class="section" id="tcp">
 <h2>4.3. TCP<a class="headerlink" href="#tcp" title="Permalink to this headline">¶</a></h2>
-<p>　 以下所有事件都是基于连接的事件，因此需要使用-S选项过滤。</p>
+<blockquote>
+Default, all of the following events are connection based events, therefore you need to use -S option filtration.</blockquote>
 <div class="section" id="tcp-congestion">
 <h3>4.3.1. tcp_congestion<a class="headerlink" href="#tcp-congestion" title="Permalink to this headline">¶</a></h3>
 <blockquote>
-<p>TCP拥塞事件。可能的类型有</p>
-<ul class="simple">
-<li>CWR。例如ECN机制在接收到ECE标志后，或者发生本地队列拥塞时。</li>
-<li>Loss。在没有启用F-RTO机制时，发生了丢包事件，可能是启动重传定时器，或者是根据SACK信息推算出丢包事件。</li>
-<li>F-RTO。在启用F-RTO时，发生了丢包事件。</li>
-<li>FastRtx。快速重传事件。</li>
-</ul>
-</blockquote>
-<p>　 这个事件支持mask选项，可以用于过滤不关心的拥塞类型，例如，使用tcp_congestion,mask=cwr:fastrtx，就不会记录CWR和快速重传拥塞事件了。</p>
-<blockquote>
-<p>一个skbparse解析后的例子:</p>
+Common options: mask,primary</blockquote>
+<p>TCP congestion event.</p>
+<p>A parsed example</p>
 <div class="highlight-python3"><div class="highlight"><pre><span class="mi">1378215231</span> <span class="mf">1347620030.225669489</span> <span class="n">action</span><span class="o">=</span><span class="n">tcp_cong</span> <span class="n">state</span><span class="o">=</span><span class="n">FRTO</span><span class="o">-</span><span class="n">Loss</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff88062f8bc700</span> <span class="n">cwnd</span><span class="o">=</span><span class="mi">32768</span> <span class="n">rto</span><span class="o">=</span><span class="mi">201</span> <span class="n">sndnxt</span><span class="o">=</span><span class="mi">1076842762</span> <span class="n">snduna</span><span class="o">=</span><span class="mi">1076842762</span>
 </pre></div>
 </div>
-</blockquote>
+<dl class="docutils">
+<dt>Fields:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>state=FRTO-Loss         - The type of congestion, Possible values of::</dt>
+<dd><ul class="first last simple">
+<li>CWR              - Congestion Window Reduced, e.g. received ECE bit with ECN or local congestion.</li>
+<li>Loss             - Packets loss</li>
+<li>FRTO-Loss        - Packets loss with enabled F-RTO.</li>
+<li>FRTO             - F-RTO is detecting if RTO is spurious.</li>
+<li>FastRtx          - Enter fast retransmitation</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">cwnd=32768              - Congestion window on congestion occurs (Unit: segment)</p>
+</li>
+<li><p class="first">rto=201                 - RTO, (Unit：microsecond)</p>
+</li>
+<li><p class="first">sndnxt=1076842762       - TCP SND_NXT</p>
+</li>
+<li><p class="first">snduna=1076842762       - TCP SND_UNA</p>
+</li>
+</ul>
+</dd>
+</dl>
 </div>
 <div class="section" id="tcp-connection">
 <h3>4.3.2. tcp_connection<a class="headerlink" href="#tcp-connection" title="Permalink to this headline">¶</a></h3>
 <blockquote>
-<p>基本TCP状态迁移事件。包括除LISTEN状态之外的其他所有基本TCP状态间的变迁动作。</p>
-<p>一个skbparse解析后的例子:</p>
+<p>Common options: primary</p>
+<p>Basic state of TCP connection migration, except LISTEN.</p>
+<p>A parsed example</p>
 <div class="highlight-python3"><div class="highlight"><pre><span class="mi">88</span> <span class="mf">1347851487.186018014</span> <span class="n">action</span><span class="o">=</span><span class="n">tcp_conn</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff880072144780</span>  <span class="n">state</span><span class="o">=</span><span class="n">ESTABLISHED</span> <span class="n">local</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span><span class="p">:</span><span class="mi">47857</span> <span class="n">peer</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span><span class="p">:</span><span class="mi">55469</span>
 </pre></div>
 </div>
 </blockquote>
+<dl class="docutils">
+<dt>Fields:</dt>
+<dd><ul class="first last simple">
+<li>state=ESTABLISHED         - The new state of a TCP connection</li>
+<li>local=127.0.0.1:47857     - The local address/port of a TCP connection</li>
+<li>peer=127.0.0.1:55469      - The peer address/port of a TCP connection</li>
+</ul>
+</dd>
+</dl>
 </div>
 <div class="section" id="icsk-connection">
 <h3>4.3.3. icsk_connection<a class="headerlink" href="#icsk-connection" title="Permalink to this headline">¶</a></h3>
 <blockquote>
-<p>基本TCP状态迁移事件。只包括到LISTEN状态的变迁。</p>
-<p>一个skbparse解析后的例子:</p>
-<div class="highlight-python3"><div class="highlight"><pre><span class="mi">144561</span> <span class="mf">1347851976.556067571</span> <span class="n">action</span><span class="o">=</span><span class="n">icsk_conn</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff880070ec4e40</span> <span class="n">state</span><span class="o">=</span><span class="n">LISTEN</span> <span class="n">local</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span><span class="p">:</span><span class="mi">53549</span>
+<p>Common options: primary</p>
+<p>Basic state of TCP connection migration, only contains LISTEN.</p>
+<p>A parsed example</p>
+<div class="highlight-python3"><div class="highlight"><pre><span class="mi">144561</span> <span class="mf">1347851976.556067571</span> <span class="n">action</span><span class="o">=</span><span class="n">icsk_conn</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff880070ec4e40</span>
 </pre></div>
 </div>
 </blockquote>
+<dl class="docutils">
+<dt>Fields:</dt>
+<dd>See tcp_connection.</dd>
+</dl>
 </div>
 <div class="section" id="tcp-sendlimit">
 <h3>4.3.4. tcp_sendlimit<a class="headerlink" href="#tcp-sendlimit" title="Permalink to this headline">¶</a></h3>
 <blockquote>
-<p>TCP在执行发送操作，可能因为各种原因停下来，这个事件用来记录停下来的原因。</p>
-<ul class="simple">
-<li>cwnd 因为拥塞窗口限制停止发送</li>
-<li>swnd 因为接收窗口限制停止发送</li>
-<li>nagle 因为Nagle算法限制停止发送</li>
-<li>tso  因为TSO原因停止发送</li>
-<li>frag 因为无法拆分过大的报文停止发送。</li>
-<li>pushone 因为pushone的标志停止发送。</li>
-<li>other 其他停止发送原因（几乎等同于内存不足）</li>
-<li>ok 有数据包发送成功。</li>
-</ul>
-<p>这个事件支持mask选项，可以用于过滤不关心的停止原因，例如，使用tcp_sendlimit,mask=ok，就不会记录发送成功的事件了。</p>
-<p>一个skbparse解析后的例子</p>
-<div class="highlight-python3"><div class="highlight"><pre><span class="mi">144606</span> <span class="mf">1347852135.453115265</span> <span class="n">action</span><span class="o">=</span><span class="n">tcp_sendlim</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff880037f96080</span> <span class="n">reason</span><span class="o">=</span><span class="n">ok</span> <span class="n">begin</span><span class="o">=</span><span class="mf">1347852135.453115265</span> <span class="n">cnt</span><span class="o">=</span><span class="mi">1</span> <span class="n">mtuprobe</span><span class="o">=</span><span class="mi">1</span> <span class="n">ssthresh</span><span class="o">=</span><span class="mi">37</span> <span class="n">cwnd</span><span class="o">=</span><span class="mi">10</span><span class="o">/</span><span class="mi">0</span> <span class="n">swnd</span><span class="o">=</span><span class="mi">33920</span>
+<p>Common options: primary,mask</p>
+<p>The reason of TCP stop sending data in tx queue.</p>
+<p>A parsed example</p>
+<div class="highlight-python3"><div class="highlight"><pre><span class="mi">144606</span> <span class="mf">1347852135.453115265</span> <span class="n">action</span><span class="o">=</span><span class="n">tcp_sendlim</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff880037f96080</span> <span class="n">reason</span><span class="o">=</span><span class="n">ok</span> <span class="n">cnt</span><span class="o">=</span><span class="mi">1</span> <span class="n">mtuprobe</span><span class="o">=</span><span class="mi">1</span> <span class="n">ssthresh</span><span class="o">=</span><span class="mi">37</span> <span class="n">cwnd</span><span class="o">=</span><span class="mi">10</span><span class="o">/</span><span class="mi">0</span> <span class="n">swnd</span><span class="o">=</span><span class="mi">33920</span>
 </pre></div>
 </div>
 </blockquote>
+<dl class="docutils">
+<dt>Fields:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>reason=ok       - The reason of stop sending, they are also can used in mask option:</dt>
+<dd><ul class="first last simple">
+<li>cwnd      - limited by cwnd</li>
+<li>swnd      - limited by receiver advertised window</li>
+<li>nagle     - limited by Nagle algorithm</li>
+<li>tso       - limited by TSO</li>
+<li>frag      - limited by failed to fragment</li>
+<li>pushone   - limited by PSH</li>
+<li>other     - limited by any other reason</li>
+<li>ok        - sucessfully sent some data</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">cnt=1           - how many segments are sucessfully sent</p>
+</li>
+<li><p class="first">mtuprobe=1      - executing PMTU probe</p>
+</li>
+<li><p class="first">ssthresh=37     - current slow start threshold</p>
+</li>
+<li><p class="first">cwnd=10/0       - snd_cwnd/snd_cwnd_cnt</p>
+</li>
+<li><p class="first">swnd=33920      - current sending window</p>
+</li>
+</ul>
+</dd>
+</dl>
 </div>
 <div class="section" id="tcp-ca-state">
 <h3>4.3.5. tcp_ca_state<a class="headerlink" href="#tcp-ca-state" title="Permalink to this headline">¶</a></h3>
 <blockquote>
-<p>TCP连接的拥塞避免算法状态变迁事件，包括：</p>
-<ul class="simple">
+<p>Common options: primary,mask</p>
+<p>TCP congestion avoidance state machine event.</p>
+<p>这个事件也支持mask选项，可以用于过滤不关心的状态，例如，tcp_ca_state,mask=disorder, 就不会记录切换到乱序状态的事件了。</p>
+<p>A parsed example</p>
+<div class="highlight-python3"><div class="highlight"><pre><span class="mi">1378026600</span> <span class="mf">1347620023.792681609</span> <span class="n">action</span><span class="o">=</span><span class="n">tcp_ca_state</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff88062f8bc700</span>
+</pre></div>
+</div>
+</blockquote>
+<dl class="docutils">
+<dt>Fields:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>state=Disorder CA states, they are also can used in mask option: ::</dt>
+<dd><ul class="first last simple">
 <li>open</li>
 <li>disorder</li>
 <li>cwr</li>
 <li>recovery</li>
 <li>loss</li>
 </ul>
-<p>这个事件也支持mask选项，可以用于过滤不关心的状态，例如，tcp_ca_state,mask=disorder, 就不会记录切换到乱序状态的事件了。</p>
-<p>一个skbparse解析后的例子</p>
-<div class="highlight-python3"><div class="highlight"><pre><span class="mi">1378026600</span> <span class="mf">1347620023.792681609</span> <span class="n">action</span><span class="o">=</span><span class="n">tcp_ca_state</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff88062f8bc700</span> <span class="n">state</span><span class="o">=</span><span class="n">Disorder</span> <span class="n">cwnd</span><span class="o">=</span><span class="mi">2</span> <span class="n">rto</span><span class="o">=</span><span class="mi">3216</span> <span class="n">snduna</span><span class="o">=</span><span class="mi">1076842506</span> <span class="n">sndnxt</span><span class="o">=</span><span class="mi">1076842762</span> <span class="n">snd_ssthresh</span><span class="o">=</span><span class="mi">7</span> <span class="n">snd_wnd</span><span class="o">=</span><span class="mi">32768</span> <span class="n">rcv_wnd</span><span class="o">=</span><span class="mi">32768</span> <span class="n">high_seq</span><span class="o">=</span><span class="mi">1076842762</span> <span class="n">packets_out</span><span class="o">=</span><span class="mi">1</span> <span class="n">lost_out</span><span class="o">=</span><span class="mi">0</span> <span class="n">retrans_out</span><span class="o">=</span><span class="mi">0</span> <span class="n">sacked_out</span><span class="o">=</span><span class="mi">0</span> <span class="n">fackets_out</span><span class="o">=</span><span class="mi">0</span> <span class="n">prior_ssthresh</span><span class="o">=</span><span class="mi">67</span> <span class="n">undo_marker</span><span class="o">=</span><span class="mi">0</span> <span class="n">undo_retrans</span><span class="o">=</span><span class="mi">0</span> <span class="n">total_retrans</span><span class="o">=</span><span class="mi">4</span> <span class="n">reordering</span><span class="o">=</span><span class="mi">28</span> <span class="n">prior_cwnd</span><span class="o">=</span><span class="mi">4294967295</span> <span class="n">mss_cache</span><span class="o">=</span><span class="mi">16384</span>
-</pre></div>
-</div>
-</blockquote>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Below are copied from tcp_sock data structure in kernel: ::</dt>
+<dd><ul class="first last simple">
+<li>cwnd=2</li>
+<li>rto=3216</li>
+<li>snduna=1076842506</li>
+<li>sndnxt=1076842762</li>
+<li>snd_ssthresh=7</li>
+<li>snd_wnd=32768</li>
+<li>rcv_wnd=32768</li>
+<li>high_seq=1076842762</li>
+<li>packets_out=1</li>
+<li>lost_out=0</li>
+<li>retrans_out=0</li>
+<li>sacked_out=0</li>
+<li>fackets_out=0</li>
+<li>prior_ssthresh=67</li>
+<li>undo_marker=0</li>
+<li>undo_retrans=0</li>
+<li>total_retrans=4</li>
+<li>reordering=28</li>
+<li>prior_cwnd=4294967295</li>
+<li>mss_cache=16384</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
 </div>
 <div class="section" id="tcp-rttm">
 <h3>4.3.6. tcp_rttm<a class="headerlink" href="#tcp-rttm" title="Permalink to this headline">¶</a></h3>
 <blockquote>
-<p>TCP在接收到每个窗口的确认之后执行RTTM时的事件。</p>
-<p>一个skbparse解析后的例子</p>
+<p>Common options: primary</p>
+<p>TCP RTT measurement.</p>
+<p>A parsed example</p>
 <div class="highlight-python3"><div class="highlight"><pre><span class="mi">144577</span> <span class="mf">1347852135.451990372</span> <span class="n">action</span><span class="o">=</span><span class="n">tcp_rttm</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff880037f96080</span> <span class="n">snd_una</span><span class="o">=</span><span class="mi">256095406</span> <span class="n">rtt_seq</span><span class="o">=</span><span class="mi">256095406</span> <span class="n">rtt</span><span class="o">=</span><span class="mi">0</span> <span class="n">rttvar</span><span class="o">=</span><span class="mi">200</span> <span class="n">srtt</span><span class="o">=</span><span class="mi">8</span> <span class="n">mdev</span><span class="o">=</span><span class="mi">2</span> <span class="n">mdev_max</span><span class="o">=</span><span class="mi">200</span>
 </pre></div>
 </div>
 </blockquote>
+<dl class="docutils">
+<dt>Fields:</dt>
+<dd><ul class="first last simple">
+<li>snd_una=256095406         - current SNA_UNA</li>
+<li>rtt_seq=256095406         - current SND_NXT</li>
+<li>rtt=0                     - current RTT sample</li>
+<li>rttvar=200                - RTTVar</li>
+<li>srtt=8                    - Smooth RTT</li>
+<li>mdev=2                    - mdev</li>
+<li>mdev_max=200              - mdev_max</li>
+</ul>
+</dd>
+</dl>
 </div>
 <div class="section" id="sk-timer">
 <h3>4.3.7. sk_timer<a class="headerlink" href="#sk-timer" title="Permalink to this headline">¶</a></h3>
 <blockquote>
-<p>各种TCP定时器事件。</p>
-<p>可能的操作包括：</p>
-<blockquote>
-<ul class="simple">
-<li>setup  初始化定时器</li>
-<li>reset　设置定时器</li>
-<li>stop　 停止定时器</li>
-</ul>
-</blockquote>
-<p>可能的定时器包括：</p>
-<blockquote>
-<ul class="simple">
-<li>rexmit　重传定时器</li>
-<li>probe　 零窗口探测定时器</li>
-<li>keepalive　保活定时器</li>
-<li>delack　　　延迟确认定时器</li>
-</ul>
-</blockquote>
-<p>这个事件支持mask选项，可以用于过滤操作和定时器，例如，tcp_ca_state,mask=probe，就把零窗口探测定时器的所有操作都忽略掉了。</p>
-<p>一个skbparse解析后的例子</p>
-<div class="highlight-python3"><div class="highlight"><pre><span class="mi">144604</span> <span class="mf">1347852135.453115265</span>  <span class="n">action</span><span class="o">=</span><span class="n">tcp_timer</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff880072422100</span> <span class="n">op</span><span class="o">=</span><span class="n">reset</span> <span class="n">timers</span><span class="o">=</span><span class="n">delay</span><span class="o">-</span><span class="n">ack</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">150</span><span class="n">ms</span>
+<p>Common options: primary, mask</p>
+<p>TCP timers event</p>
+<p>A parsed example</p>
+<div class="highlight-python3"><div class="highlight"><pre><span class="mi">144604</span> <span class="mf">1347852135.453115265</span>  <span class="n">action</span><span class="o">=</span><span class="n">tcp_timer</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff880072422100</span>
 </pre></div>
 </div>
 </blockquote>
+<dl class="docutils">
+<dt>Fields:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>op=reset         - operations, they are also can used in mask option, possbile values of: ::</dt>
+<dd><ul class="first last simple">
+<li>setup</li>
+<li>reset</li>
+<li>stop</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>timers=delay-ack         - timer, they are also can used in mask option, possbile values of: ::</dt>
+<dd><ul class="first last simple">
+<li>rexmit        - RTO timer</li>
+<li>probe         - Zero window probe timer</li>
+<li>keepalive     - Keepalive timer</li>
+<li>delack        - Delayed ACK timer.</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">timeout=150ms    - Timeout, unit: microseconds</p>
+</li>
+</ul>
+</dd>
+</dl>
 </div>
 <div class="section" id="tcp-active-conn">
 <h3>4.3.8. tcp_active_conn<a class="headerlink" href="#tcp-active-conn" title="Permalink to this headline">¶</a></h3>
 <blockquote>
-<p>记录当前活动TCP连接的信息，每个活动连接只记录一次。这个事件可以用于将其他事件数据中的sk指针转换成具体的连接信息。</p>
+<p>Record address information of current active TCP connections, each active TCP connection only record one time each executing skbtrace.</p>
 <blockquote>
-<p>一个skbparse解析后的例子</p>
-<div class="highlight-python3"><div class="highlight"><pre><span class="mi">144572</span> <span class="mf">1347852135.451990372</span> <span class="n">action</span><span class="o">=</span><span class="n">tcp_active_conn</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff880037f96080</span> <span class="n">state</span><span class="o">=</span><span class="n">ESTABLISHED</span> <span class="n">local</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span><span class="p">:</span><span class="mi">41223</span> <span class="n">peer</span><span class="o">=</span><span class="mf">127.0</span><span class="o">.</span><span class="mf">0.1</span><span class="p">:</span><span class="mi">12865</span>
+<p>A parsed example</p>
+<div class="highlight-python3"><div class="highlight"><pre><span class="mi">144572</span> <span class="mf">1347852135.451990372</span> <span class="n">action</span><span class="o">=</span><span class="n">tcp_active_conn</span> <span class="n">sk</span><span class="o">=</span><span class="mh">0xffff880037f96080</span>
 </pre></div>
 </div>
 </blockquote>
 </blockquote>
+<dl class="docutils">
+<dt>Fields:</dt>
+<dd><ul class="first last simple">
+<li>state=ESTABLISHED         - Current state of a TCP connection.</li>
+<li>local=127.0.0.1:41223     - local address:port</li>
+<li>peer=127.0.0.1:12865      - peer address:port</li>
+</ul>
+</dd>
+</dl>
 </div>
 </div>
 </div>
@@ -229,13 +401,15 @@
         <div class="sphinxsidebarwrapper">
             <h3><a href="../contents.html">Table Of Contents</a></h3>
             <ul>
-<li><a class="reference external" href="">4. 跟踪事件列表</a><ul>
-<li><a class="reference external" href="#id2">4.1. 事件选项</a><ul>
-<li><a class="reference external" href="#primary">4.1.1. primary</a></li>
+<li><a class="reference external" href="">4. Trace events list</a><ul>
+<li><a class="reference external" href="#options">4.1. Options</a><ul>
+<li><a class="reference external" href="#mask">4.1.1. mask</a></li>
+<li><a class="reference external" href="#primary">4.1.2. primary</a></li>
 </ul>
 </li>
-<li><a class="reference external" href="#id3">4.2. 通用事件</a><ul>
-<li><a class="reference external" href="#skb-rps-info">4.2.1. skb_rps_info</a></li>
+<li><a class="reference external" href="#common-events">4.2. Common events</a><ul>
+<li><a class="reference external" href="#common-parsed-fields">4.2.1. Common parsed fields</a></li>
+<li><a class="reference external" href="#skb-rps-info">4.2.2. skb_rps_info</a></li>
 </ul>
 </li>
 <li><a class="reference external" href="#tcp">4.3. TCP</a><ul>
@@ -255,7 +429,7 @@
 
             <h4>Previous topic</h4>
             <p class="topless"><a href="options.html"
-                                  title="previous chapter">3. 命令行选项</a></p>
+                                  title="previous chapter">3. Command line options</a></p>
             <h4>Next topic</h4>
             <p class="topless"><a href="../howto/index.html"
                                   title="next chapter">HOWTOs</a></p>
@@ -291,7 +465,7 @@
           <a href="../howto/index.html" title="HOWTOs"
              >next</a> |</li>
         <li class="right" >
-          <a href="options.html" title="3. 命令行选项"
+          <a href="options.html" title="3. Command line options"
              >previous</a> |</li>
         <li><img src="../_static/py.png" alt=""
                  style="vertical-align: middle; margin-top: -1px"/></li>
@@ -303,7 +477,7 @@
     <div class="footer">
     &copy; <a href="../copyright.html">Copyright</a> 2012, Li Yu.
     <br />
-    Last updated on Sep 17, 2012.
+    Last updated on Oct 28, 2012.
     Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.6.2.
     </div>
 

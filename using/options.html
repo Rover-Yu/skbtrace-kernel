@@ -5,7 +5,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>3. 命令行选项 &mdash; Skbtrace v20120916 documentation</title>
+    <title>3. Command line options &mdash; Skbtrace v20120916 documentation</title>
     <link rel="stylesheet" href="../static/default.css" type="text/css" />
     <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -26,8 +26,8 @@
     <link rel="copyright" title="Copyright" href="../copyright.html" />
     <link rel="top" title="Skbtrace v20120916 documentation" href="../index.html" />
     <link rel="up" title="The Skbtace User Manual" href="index.html" />
-    <link rel="next" title="4. 跟踪事件列表" href="events.html" />
-    <link rel="prev" title="2. 编译" href="building.html" />
+    <link rel="next" title="4. Trace events list" href="events.html" />
+    <link rel="prev" title="2. Building" href="building.html" />
     <link rel="shortcut icon" type="image/png" href="../static/py.png" />
  
 
@@ -40,10 +40,10 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="events.html" title="4. 跟踪事件列表"
+          <a href="events.html" title="4. Trace events list"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="building.html" title="2. 编译"
+          <a href="building.html" title="2. Building"
              accesskey="P">previous</a> |</li>
         <li><img src="../_static/py.png" alt=""
                  style="vertical-align: middle; margin-top: -1px"/></li>
@@ -58,67 +58,109 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="options">
-<span id="id1"></span><h1>3. 命令行选项<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h1>
-<p>Skbtrace目前提供了两个用户空间工具：</p>
+  <div class="section" id="command-line-options">
+<span id="options"></span><h1>3. Command line options<a class="headerlink" href="#command-line-options" title="Permalink to this headline">¶</a></h1>
+<p>Skbtrace provides below two user space utilties:</p>
 <ul class="simple">
-<li>skbtrace, 功能是把内核记录的协议栈跟踪事件结构记录在磁盘上。</li>
-<li>skbparse, 功能是将skbtrace记录的数据解析成易读的文本格式。</li>
+<li>skbtrace, this utility is used to record traced binary data from kernel into some files</li>
+<li>skbparse, this utility is used to parse binary traced data into human readable text form.</li>
 </ul>
 <div class="section" id="skbtrace">
 <h2>3.1. skbtrace<a class="headerlink" href="#skbtrace" title="Permalink to this headline">¶</a></h2>
 <dl class="docutils">
 <dt><tt class="docutils literal"><span class="pre">-r</span> <span class="pre">PATH</span></tt></dt>
-<dd>挂载debugfs的目录位置。skbtrace是从debugfs（relayfs）中读取内核协议栈中的跟踪事件的。如果这个目录上没有挂载debugfs，skbtrace会尝试挂载，如果尝试失败，skbtrace会失败退出。默认位置是/sys/kernel/debug。</dd>
+<dd><p class="first">The mount point of debugfs file system. skbtrace use debugfs to read traced binary data from kernel. skbtrace tries to mount it if it was not mounted at PATH.</p>
+<p class="last">Default is /sys/kernel/debug.</p>
+</dd>
 <dt><tt class="docutils literal"><span class="pre">-D</span> <span class="pre">DIR</span></tt></dt>
-<dd>输出目录，这个目录必须事先存在。默认目录是./skbtrace.results</dd>
+<dd><p class="first">The directory which record traced binary data into. skbtrace tries to create it first if it did not exist.</p>
+<p class="last">Default is ./skbtrace.results</p>
+</dd>
 <dt><tt class="docutils literal"><span class="pre">-w</span> <span class="pre">SECONDS</span></tt></dt>
-<dd>指定skbtrace的运行时间，以秒为单位。如果没有指定这个选项，并且也没有指定运行的子进程，skbtrace会永远运行下去，直到收到SIGINT信号（即当你按下Ctrl-C时的行为）。虽然也可以使用SIGKILL结束skbtrace运行，但建议不要那样做，因为它可能导致skbtrace丢失一部分事件，另外清理内核缓冲区的操作也会被跳过。</dd>
+<dd><p class="first">Sets run time to the number of seconds specified.</p>
+<p class="last">Default: Run until receiving SIGINT signal (Press Ctrl-C and by kill command). Of course, you also can use SIGKILL to terminate skbtrace, but it is not recommended, because of skbtrace may drop some trace data at this time, and then you probably can not unload these skbtrace kernel modules since non-zero reference counts (Tips: normal terminating skbtrace again can reset reference count of kernel modules).</p>
+</dd>
 <dt><tt class="docutils literal"><span class="pre">-b</span> <span class="pre">BYTES</span></tt> <tt class="docutils literal"><span class="pre">-n</span> <span class="pre">COUNT</span></tt></dt>
-<dd>分别指定Relayfs中subbuffer的大小和个数。如果你发现skbtrace在结束运行时，汇报了事件丢失，可以尝试扩大这两个配置。</dd>
-<dt><tt class="docutils literal"><span class="pre">-c</span> <span class="pre">PATH</span></tt></dt>
-<dd>指定配置文件skbtrace.conf的搜索路径。这个路径列表中所有配置文件中的配置会叠加到一起。如果配置为空，默认是启用所有跟踪事件。也可以使用-e选项启用事件。</dd>
-<dt><tt class="docutils literal"><span class="pre">-C</span> <span class="pre">CHANNEL_LIST</span></tt></dt>
-<dd>事件可能分别发生在硬中断、软中断和系统调用中。但我们有时只关心其中某(几)个上下文内的事件，这时可以使用这个选项指定我们关心的”通道“，以过滤掉”噪音“。
-CHANNEL_LIST是以逗号分割的CHANNEL列表。CHANNEL可能是syscall，softirq，hardirq。</dd>
+<dd>Specfify size and count of sub buffers in relay file system. You may try to increase these if skbtrace reported some traced data are dropped.</dd>
+<dt><tt class="docutils literal"><span class="pre">-c</span> <span class="pre">PATH_LIST</span></tt></dt>
+<dd><p class="first">The comma separated path list to locate configuration file skbtrace.conf. All configurations in found skbtrace.conf files will be merged together.</p>
+<p class="last">Default is to enable all events.</p>
+</dd>
+<dt><tt class="docutils literal"><span class="pre">-C</span> <span class="pre">CONTEXT_LIST</span></tt></dt>
+<dd><p class="first">Specify to which are interested contexts events are triggered under. Events may be triggered under hard interrupt context, softirq context or syscall context. Sometimes, we only focus on events are triggered under specific contexts, this option provides such capability to filter out these uninterested contexts.</p>
+<ul>
+<li><dl class="first docutils">
+<dt>CONTEXT_LIST The comma separated CONTEXT list, CONTEXT may be:</dt>
+<dd><ul class="first last simple">
+<li>syscall</li>
+<li>softirq</li>
+<li>hardirq</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<p class="last">Default are all contexts.</p>
+</dd>
 <dt><tt class="docutils literal"><span class="pre">-p</span> <span class="pre">PROCESSOR_MASK</span></tt></dt>
-<dd>事件可能发生在不同的处理器上。如果我们只关心特定处理器上的事件，可以使用这个事件指定这些处理器。PROCESSOR_MASK的格式，类似于设置中断亲和性时的场景：1=cpu0, 2=cpu1, 4=cpu2, 8=cpu3，以此类推。</dd>
+<dd><p class="first">You can use this option if the events are triggered on only some specific processors are interested.</p>
+<blockquote>
+<ul class="simple">
+<li>PROCESSOR_MASK 1 = CPU0, CPU1, 4 = CPU2, 8 = cpu3, and so on.</li>
+</ul>
+</blockquote>
+<p class="last">Default is all processors.</p>
+</dd>
 <dt><tt class="docutils literal"><span class="pre">-e</span> <span class="pre">EVENT[,OPTIONS_LIST]</span></tt></dt>
-<dd>指定跟踪事件。这个选项可以使用多次，每个指定不同的跟踪事件。
-* EVENT       事件名称。
-* OPTIONS_LIST       事件的选项列表，以逗号分割。
-完整的事件列表，请参考 <a class="reference external" href="events.html#events"><em>跟踪事件列表</em></a> 。</dd>
+<dd><p class="first">Specify which are events you interested to, this option can be used repeatly, each one give a different trace event.</p>
+<blockquote>
+<ul class="simple">
+<li>EVENT   The name of trace event.</li>
+<li>OPTIONS_LIST   The colon separated OPTION list of trace event,</li>
+</ul>
+</blockquote>
+<p>For completed events reference manual, please refer to <a class="reference external" href="events.html#events"><em>Trace events list</em></a> .</p>
+<p class="last">Default are to enable all events.</p>
+</dd>
 <dt><tt class="docutils literal"><span class="pre">-F</span> <span class="pre">FILTER</span></tt></dt>
-<dd>指定基于报文的BPF过滤器。语法类似于tcpdump。</dd>
+<dd><p class="first">Specify the BPF based packet events filter. Please refer to manual of libpcap for syntax details</p>
+<p class="last">Default is empty filter.</p>
+</dd>
 <dt><tt class="docutils literal"><span class="pre">-S</span> <span class="pre">FILTER</span></tt></dt>
-<dd>指定基于连接的BPF过滤器。对于TCP，目前只支持使用基于IPv4地址和端口的过滤器。</dd>
+<dd><p class="first">Specify the BPF based connection events filter. It only support TCP/IPv4 connections at present, and only can use IP addresses or/and ports. Please refer to manual of libpcap for syntax details.</p>
+<p class="last">Default is empty filter.</p>
+</dd>
 <dt><tt class="docutils literal"><span class="pre">-s</span></tt></dt>
-<dd>配合skbparse，可以在标准输出上实时显示跟踪事件信息。例如可以这样：skbtrace -s | skbparse -s -S</dd>
+<dd>This option is designed to work together with skbparse, it control skbparse to show parsed results at console lively. But this feature still is incompleted.</dd>
 <dt><tt class="docutils literal"><span class="pre">-f</span></tt></dt>
-<dd>默认情况下，如果结果目录下已经有上次写入的结果，skbtrace会错误退出。但如果使用了这个选项，skbtrace会直接覆盖掉它们。</dd>
+<dd>Overwrite possible old traced data without any warning.</dd>
 <dt><tt class="docutils literal"><span class="pre">-l</span></tt></dt>
-<dd>显示所有可用的跟踪事件列表。</dd>
+<dd>Show all available trace events list.</dd>
 <dt><tt class="docutils literal"><span class="pre">-V</span></tt></dt>
-<dd>Verbose模式，可以在运行时显示更多的skbtrace内部状态。</dd>
+<dd>Show more internal runtime information.</dd>
 <dt><tt class="docutils literal"><span class="pre">-v</span></tt></dt>
-<dd>显示版本信息，然后退出。</dd>
+<dd>Show version number, then quit.</dd>
 </dl>
 </div>
 <div class="section" id="skbparse">
 <h2>3.2. skbparse<a class="headerlink" href="#skbparse" title="Permalink to this headline">¶</a></h2>
 <dl class="docutils">
 <dt><tt class="docutils literal"><span class="pre">-v</span></tt></dt>
-<dd>显示版本信息并退出。</dd>
+<dd>Show version number, then quit.</dd>
 <dt><tt class="docutils literal"><span class="pre">-s</span></tt></dt>
-<dd>使用skbtrace的控制信息，在标准输出上实时显示解析结果。(目前未实现)</dd>
+<dd>Show parsed results on standard output lively, it is a TODO.</dd>
 <dt><tt class="docutils literal"><span class="pre">-S</span></tt></dt>
-<dd>在标准输出上显示解析结果。</dd>
+<dd>Show parsed results on standard output.</dd>
 <dt><tt class="docutils literal"><span class="pre">-o</span> <span class="pre">PATH</span></tt></dt>
-<dd>指定skbparse结果的输出目录，默认为当前目录。</dd>
+<dd><p class="first">The output directory to save parsed human readable results.</p>
+<p class="last">Default is current directory.</p>
+</dd>
 <dt><tt class="docutils literal"><span class="pre">-i</span> <span class="pre">PATH</span></tt></dt>
-<dd>指定skbtrace的输出结果目录，即输入目录，默认为./skbtrace.results</dd>
+<dd><p class="first">The output directory to read trace binary data are recorded by skbtrace.</p>
+<p class="last">Default is ./skbtrace.results</p>
+</dd>
 <dt><tt class="docutils literal"><span class="pre">-h</span></tt></dt>
-<dd>显示帮助信息。</dd>
+<dd>Show helps, then quit.</dd>
 </dl>
 </div>
 </div>
@@ -131,7 +173,7 @@ CHANNEL_LIST是以逗号分割的CHANNEL列表。CHANNEL可能是syscall，softi
         <div class="sphinxsidebarwrapper">
             <h3><a href="../contents.html">Table Of Contents</a></h3>
             <ul>
-<li><a class="reference external" href="">3. 命令行选项</a><ul>
+<li><a class="reference external" href="">3. Command line options</a><ul>
 <li><a class="reference external" href="#skbtrace">3.1. skbtrace</a></li>
 <li><a class="reference external" href="#skbparse">3.2. skbparse</a></li>
 </ul>
@@ -140,10 +182,10 @@ CHANNEL_LIST是以逗号分割的CHANNEL列表。CHANNEL可能是syscall，softi
 
             <h4>Previous topic</h4>
             <p class="topless"><a href="building.html"
-                                  title="previous chapter">2. 编译</a></p>
+                                  title="previous chapter">2. Building</a></p>
             <h4>Next topic</h4>
             <p class="topless"><a href="events.html"
-                                  title="next chapter">4. 跟踪事件列表</a></p>
+                                  title="next chapter">4. Trace events list</a></p>
             <h3>This Page</h3>
             <ul class="this-page-menu">
               <li><a href="../sources/using/options.txt"
@@ -173,10 +215,10 @@ CHANNEL_LIST是以逗号分割的CHANNEL列表。CHANNEL可能是syscall，softi
           <a href="../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="events.html" title="4. 跟踪事件列表"
+          <a href="events.html" title="4. Trace events list"
              >next</a> |</li>
         <li class="right" >
-          <a href="building.html" title="2. 编译"
+          <a href="building.html" title="2. Building"
              >previous</a> |</li>
         <li><img src="../_static/py.png" alt=""
                  style="vertical-align: middle; margin-top: -1px"/></li>
@@ -188,7 +230,7 @@ CHANNEL_LIST是以逗号分割的CHANNEL列表。CHANNEL可能是syscall，softi
     <div class="footer">
     &copy; <a href="../copyright.html">Copyright</a> 2012, Li Yu.
     <br />
-    Last updated on Sep 17, 2012.
+    Last updated on Oct 28, 2012.
     Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.6.2.
     </div>
 
