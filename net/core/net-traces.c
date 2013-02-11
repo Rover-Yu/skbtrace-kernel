@@ -53,6 +53,7 @@ NEW_SKBTRACE_TP(tcp_sendlimit);
 NEW_SKBTRACE_TP(tcp_active_conn);
 NEW_SKBTRACE_TP(tcp_rttm);
 NEW_SKBTRACE_TP(tcp_ca_state);
+NEW_SKBTRACE_TP(tcp_reset);
 
 unsigned long skbtrace_session;
 EXPORT_SYMBOL(skbtrace_session);

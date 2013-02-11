@@ -39,6 +39,7 @@ enum {
 	skbtrace_action_tcp_active_conn	= 104,
 	skbtrace_action_tcp_rttm	= 105,
 	skbtrace_action_tcp_ca_state	= 106,
+	skbtrace_action_tcp_reset	= 107,
 	skbtrace_action_tcp_max		= 199,
 };
 
@@ -62,23 +63,25 @@ struct skbtrace_tcp_cong_blk {
 	__u32	snduna;
 } __packed;
 
+union skbtrace_addr {
+	struct {
+		struct sockaddr local;
+		struct sockaddr peer;
+	};
+	struct {
+		struct sockaddr_in local;
+		struct sockaddr_in peer;
+	} inet;
+	struct {
+		struct sockaddr_in6 local;
+		struct sockaddr_in6 peer;
+	} inet6;
+};
+
 /* TCP basic connection event (102) */
 struct skbtrace_tcp_conn_blk {
 	struct skbtrace_block blk;
-	union {
-		struct {
-			struct sockaddr local;
-			struct sockaddr peer;
-		};
-		struct {
-			struct sockaddr_in local;
-			struct sockaddr_in peer;
-		} inet;
-		struct {
-			struct sockaddr_in6 local;
-			struct sockaddr_in6 peer;
-		} inet6;
-	} addr;
+	union skbtrace_addr addr;
 } __packed;
 
 /* TCP send limit event (103) */
@@ -160,5 +163,17 @@ enum {
 	skbtrace_tcp_timer_keepalive,
 	skbtrace_tcp_timer_delack,
 };
+
+/* TCP send/recv reset */
+/* location = 1, means recv a reset */
+/* location > 1, means send reset, which is calling address */
+struct skbtrace_tcp_reset_blk {
+	struct skbtrace_block blk;
+
+	__u64  location;
+	__u8   state;
+	__u8  pad[7];
+	union skbtrace_addr addr;
+} __packed;
 
 #endif

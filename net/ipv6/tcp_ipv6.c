@@ -73,6 +73,7 @@
 #include <linux/scatterlist.h>
 
 #include <linux/skbtrace.h>
+#include <trace/events/skbtrace_ipv4.h>
 
 static void	tcp_v6_send_reset(struct sock *sk, struct sk_buff *skb);
 static void	tcp_v6_reqsk_send_ack(struct sock *sk, struct sk_buff *skb,
@@ -1517,6 +1518,7 @@ static int tcp_v6_rcv(struct sk_buff *skb)
 		goto no_tcp_socket;
 
 process:
+	trace_tcp_reset(sk, (u64)(!!th->rst));
 	if (sk->sk_state == TCP_TIME_WAIT)
 		goto do_time_wait;
 

@@ -56,4 +56,8 @@ DECLARE_TRACE(tcp_ca_state,
 	TP_PROTO(void *sk, __u8 state),
 	TP_ARGS(sk, state));
 
+DECLARE_TRACE(tcp_reset,
+	TP_PROTO(void *sk, u64 location),
+	TP_ARGS(sk, location));
+
 #endif

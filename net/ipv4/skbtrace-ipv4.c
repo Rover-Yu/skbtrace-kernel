@@ -573,6 +573,35 @@ SKBTRACE_SOCK_EVENT_BEGIN
 	skbtrace_probe(t, ctx, &b->blk);
 SKBTRACE_SOCK_EVENT_END
 
+static void skbtrace_tcp_reset(struct skbtrace_tracepoint *t,
+						struct sock *sk, u64 ptr)
+SKBTRACE_SOCK_EVENT_BEGIN
+	struct skbtrace_ops *ops;
+	struct skbtrace_tcp_reset_blk blk, *b;
+	struct skbtrace_context *ctx;
+
+	if (!sk || !ptr)
+		/* !sk, means we skip incoming RESET for non-existent connection */
+		/* !ptr, means we skip non-RESET segments */
+		return;
+	ctx = skbtrace_context_get(sk);
+	b = skbtrace_block_get(t, ctx, &blk);
+	INIT_SKBTRACE_BLOCK(&b->blk, sk,
+			skbtrace_action_tcp_reset, 0, sizeof(blk));
+	b->location = ptr;
+	b->state = sk->sk_state;
+	ops = skbtrace_ops_get(sk->sk_family);
+	if (TCP_TIME_WAIT == b->state) {
+		ops->tw_getname(inet_twsk(sk), &b->addr.local, 0);
+		ops->tw_getname(inet_twsk(sk), &b->addr.peer, 1);
+	} else {
+		ops->getname(sk, &b->addr.local, NULL, 0);
+		if (TCP_LISTEN != b->state)
+			ops->getname(sk, &b->addr.peer, NULL, 1);
+	}
+	skbtrace_probe(t, ctx, &b->blk);
+SKBTRACE_SOCK_EVENT_END
+
 static struct skbtrace_tracepoint_probe tcp_connection_probe_list[] = {
 	{
 		.name = "tcp_connection",
@@ -639,6 +668,13 @@ static struct skbtrace_tracepoint tp_inet4[] = {
 		.probe = skbtrace_tcp_timer,
 		.has_sk_mark_option = 1,
 		MASK_OPTION_INIT(tcp_timer_mask_names, tcp_timer_mask_values),
+	},
+	{
+		.trace_name = "tcp_reset",
+		.action = skbtrace_action_tcp_reset,
+		.block_size = sizeof(struct skbtrace_tcp_reset_blk),
+		.probe = skbtrace_tcp_reset,
+		.has_sk_mark_option = 1,
 	},
 	EMPTY_SKBTRACE_TP
 };

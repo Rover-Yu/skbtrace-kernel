@@ -711,6 +711,7 @@ static void tcp_v4_send_reset(struct sock *sk, struct sk_buff *skb)
 	ip_send_unicast_reply(net, skb, ip_hdr(skb)->saddr,
 			      ip_hdr(skb)->daddr, &arg, arg.iov[0].iov_len);
 
+	trace_tcp_reset(sk, (u64)__builtin_return_address(0));
 	TCP_INC_STATS_BH(net, TCP_MIB_OUTSEGS);
 	TCP_INC_STATS_BH(net, TCP_MIB_OUTRSTS);
 
@@ -1998,6 +1999,7 @@ int tcp_v4_rcv(struct sk_buff *skb)
 		goto no_tcp_socket;
 
 process:
+	trace_tcp_reset(sk, (u64)(!!th->rst));
 	if (sk->sk_state == TCP_TIME_WAIT)
 		goto do_time_wait;
 
