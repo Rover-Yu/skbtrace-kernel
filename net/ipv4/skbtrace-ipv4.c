@@ -340,6 +340,29 @@ SKBTRACE_SOCK_EVENT_BEGIN
 	skbtrace_probe(t, ctx, &b->blk);
 SKBTRACE_SOCK_EVENT_END
 
+static void skbtrace_tcp_active_conn(struct skbtrace_tracepoint *t,
+							struct sock *sk)
+SKBTRACE_SOCK_EVENT_BEGIN
+	struct skbtrace_tcp_conn_blk blk, *b;
+	struct skbtrace_context *ctx;
+
+	ctx = skbtrace_context_get(sk);
+	if (ctx) {
+		if (ctx->active_conn_hit)
+			return;
+		ctx->active_conn_hit = 1;
+	}
+
+	b = skbtrace_block_get(t, ctx, &blk);
+	INIT_SKBTRACE_BLOCK(&b->blk, sk,
+			skbtrace_action_tcp_active_conn, 0, sizeof(blk));
+	if (ctx && ctx->ops) {
+		ctx->ops->getname(sk, &b->addr.local, NULL, 0);
+		ctx->ops->getname(sk, &b->addr.peer, NULL, 1);
+	} else
+		memset(&b->addr, 0, sizeof(b->addr));
+	skbtrace_probe(t, ctx, &b->blk);
+SKBTRACE_SOCK_EVENT_END
 
 static struct skbtrace_tracepoint_probe tcp_connection_probe_list[] = {
 	{
@@ -367,6 +390,13 @@ static struct skbtrace_tracepoint tp_inet4[] = {
 		.action = skbtrace_action_tcp_connection,
 		.block_size = sizeof(struct skbtrace_tcp_conn_blk),
 		.probe_list = tcp_connection_probe_list,
+		.has_sk_mark_option = 1,
+	},
+	{
+		.trace_name = "tcp_active_conn",
+		.action = skbtrace_action_tcp_active_conn,
+		.block_size = sizeof(struct skbtrace_tcp_conn_blk),
+		.probe = skbtrace_tcp_active_conn,
 		.has_sk_mark_option = 1,
 	},
 	EMPTY_SKBTRACE_TP

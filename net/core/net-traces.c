@@ -49,6 +49,7 @@ NEW_SKBTRACE_TP(sk_timer);
 NEW_SKBTRACE_TP(tcp_congestion);
 NEW_SKBTRACE_TP(tcp_connection);
 NEW_SKBTRACE_TP(icsk_connection);
+NEW_SKBTRACE_TP(tcp_active_conn);
 
 unsigned long skbtrace_session;
 EXPORT_SYMBOL(skbtrace_session);

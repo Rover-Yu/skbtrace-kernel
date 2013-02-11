@@ -35,6 +35,7 @@ enum {
 	skbtrace_action_tcp_min		= 101,
 	skbtrace_action_tcp_congestion	= 101,
 	skbtrace_action_tcp_connection	= 102,
+	skbtrace_action_tcp_active_conn	= 104,
 	skbtrace_action_tcp_max		= 199,
 };
 
