@@ -32,6 +32,9 @@
 #include <asm/atomic.h>
 
 #include <net/sock.h>
+#if defined(CONFIG_SKBTRACE_IPV4) || defined(CONFIG_SKBTRACE_IPV4_MODULE)
+#include <net/inet_timewait_sock.h>
+#endif
 
 #if defined(CONFIG_SKBTRACE) || defined(CONFIG_SKBTRACE_MODULE)
 #define HAVE_SKBTRACE 1
@@ -458,6 +461,34 @@ static inline int skbtrace_bypass_sock(struct skbtrace_tracepoint *t,
 		return t->sk_mark != sk->sk_mark;
 	return 0;
 }
+
+#if defined(CONFIG_SKBTRACE_IPV4) || defined(CONFIG_SKBTRACE_IPV4_MODULE)
+static inline int skbtrace_bypass_twsk(struct inet_timewait_sock *tw)
+{
+	if (static_key_false(&skbtrace_filters_enabled)) {
+		if (likely(tw->tw_skbtrace_filtered &&
+				(skbtrace_sock_filter_id == tw->tw_skbtrace_fid))) {
+			return tw->tw_hit_skbtrace;
+		}
+		if (skbtrace_sock_filter) {
+			unsigned int pkt_len;
+			struct sk_buff *skb;
+
+			skb = skbtrace_get_twsk_filter_skb(tw);
+			if (skb) {
+				pkt_len = SK_RUN_FILTER(skbtrace_sock_filter, skb);
+				tw->tw_hit_skbtrace = !pkt_len;
+				tw->tw_skbtrace_filtered = 1;
+				skbtrace_put_twsk_filter_skb(skb);
+				tw->tw_skbtrace_fid = skbtrace_sock_filter_id;
+				return tw->tw_hit_skbtrace;
+			}
+			return sysctl_skbtrace_filter_default;
+		}
+	}
+	return 0;
+}
+#endif
 
 #define SKBTRACE_SOCK_EVENT_BEGIN \
 {\

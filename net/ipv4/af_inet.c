@@ -119,6 +119,7 @@
 #include <linux/mroute.h>
 #endif
 
+#include <linux/skbtrace.h>
 
 /* The inetsw table contains everything that inet_create needs to
  * build a new socket.
@@ -737,23 +738,14 @@ do_err:
 }
 EXPORT_SYMBOL(inet_accept);
 
-
-/*
- *	This does both peername and sockname.
- */
-int inet_getname(struct socket *sock, struct sockaddr *uaddr,
+int inet_sock_getname(struct sock *sk, struct sockaddr *uaddr,
 			int *uaddr_len, int peer)
 {
-	struct sock *sk		= sock->sk;
 	struct inet_sock *inet	= inet_sk(sk);
 	DECLARE_SOCKADDR(struct sockaddr_in *, sin, uaddr);
 
 	sin->sin_family = AF_INET;
 	if (peer) {
-		if (!inet->inet_dport ||
-		    (((1 << sk->sk_state) & (TCPF_CLOSE | TCPF_SYN_SENT)) &&
-		     peer == 1))
-			return -ENOTCONN;
 		sin->sin_port = inet->inet_dport;
 		sin->sin_addr.s_addr = inet->inet_daddr;
 	} else {
@@ -764,8 +756,30 @@ int inet_getname(struct socket *sock, struct sockaddr *uaddr,
 		sin->sin_addr.s_addr = addr;
 	}
 	memset(sin->sin_zero, 0, sizeof(sin->sin_zero));
-	*uaddr_len = sizeof(*sin);
+	if (uaddr_len)
+		*uaddr_len = sizeof(*sin);
 	return 0;
+}
+EXPORT_SYMBOL(inet_sock_getname);
+
+/*
+ *	This does both peername and sockname.
+ */
+int inet_getname(struct socket *sock, struct sockaddr *uaddr,
+			int *uaddr_len, int peer)
+{
+	struct sock *sk		= sock->sk;
+	struct inet_sock *inet	= inet_sk(sk);
+
+	if (peer) {
+		if (!inet->inet_dport)
+			return -ENOTCONN;
+		if (((1 << sk->sk_state) & (TCPF_CLOSE | TCPF_SYN_SENT)) &&
+		     peer == 1)
+			return -ENOTCONN;
+	}
+
+	return inet_sock_getname(sk, uaddr, uaddr_len, peer);
 }
 EXPORT_SYMBOL(inet_getname);
 

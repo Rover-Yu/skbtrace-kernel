@@ -12,6 +12,7 @@
 #include <linux/kmemcheck.h>
 #include <linux/slab.h>
 #include <linux/module.h>
+#include <linux/skbtrace.h>
 #include <net/inet_hashtables.h>
 #include <net/inet_timewait_sock.h>
 #include <net/ip.h>
@@ -106,6 +107,7 @@ static noinline void inet_twsk_free(struct inet_timewait_sock *tw)
 #ifdef SOCK_REFCNT_DEBUG
 	pr_debug("%s timewait_sock %p released\n", tw->tw_prot->name, tw);
 #endif
+	skbtrace_context_destroy(&tw->tw_skbtrace);
 	release_net(twsk_net(tw));
 	kmem_cache_free(tw->tw_prot->twsk_prot->twsk_slab, tw);
 	module_put(owner);
@@ -196,6 +198,10 @@ struct inet_timewait_sock *inet_twsk_alloc(const struct sock *sk, const int stat
 		tw->tw_ipv6only	    = 0;
 		tw->tw_transparent  = inet->transparent;
 		tw->tw_prot	    = sk->sk_prot_creator;
+		tw->tw_skbtrace_fid = 0;
+#if HAVE_SKBTRACE
+		tw->tw_skbtrace     = NULL;
+#endif
 		twsk_net_set(tw, hold_net(sock_net(sk)));
 		/*
 		 * Because we use RCU lookups, we should not set tw_refcnt

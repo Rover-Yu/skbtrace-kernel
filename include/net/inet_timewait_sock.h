@@ -89,6 +89,8 @@ extern void inet_twdr_twcal_tick(unsigned long data);
 
 struct inet_bind_bucket;
 
+struct skbtrace_context;
+
 /*
  * This is a TIME_WAIT sock. It works around the memory consumption
  * problems of sockets in such a state on heavily loaded servers, but
@@ -128,10 +130,18 @@ struct inet_timewait_sock {
 	/* And these are ours. */
 	unsigned int		tw_ipv6only     : 1,
 				tw_transparent  : 1,
-				tw_pad		: 6,	/* 6 bits hole */
+#if defined(CONFIG_SKBTRACE) || defined(CONFIG_SKBTRACE_MODULE)
+				tw_skbtrace_filtered : 1,
+				tw_hit_skbtrace : 1,
+#endif
+				tw_pad		: 4,	/* 4 bits hole */
 				tw_tos		: 8,
 				tw_ipv6_offset  : 16;
 	kmemcheck_bitfield_end(flags);
+#if defined(CONFIG_SKBTRACE) || defined(CONFIG_SKBTRACE_MODULE)
+	unsigned int tw_skbtrace_fid;
+	struct skbtrace_context *tw_skbtrace;
+#endif
 	unsigned long		tw_ttd;
 	struct inet_bind_bucket	*tw_tb;
 	struct hlist_node	tw_death_node;

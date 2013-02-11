@@ -85,6 +85,8 @@
 #include <linux/crypto.h>
 #include <linux/scatterlist.h>
 
+#include <linux/skbtrace.h>
+
 int sysctl_tcp_tw_reuse __read_mostly;
 int sysctl_tcp_low_latency __read_mostly;
 EXPORT_SYMBOL(sysctl_tcp_low_latency);
@@ -2839,9 +2841,37 @@ int tcp4_gro_complete(struct sk_buff *skb)
 	return tcp_gro_complete(skb);
 }
 
+#if HAVE_SKBTRACE
+int tcp_filter_skb(struct sock *sk, struct sk_buff *skb)
+{
+	struct inet_sock *inet;
+	struct tcphdr *th;
+
+	inet = inet_sk(sk);
+
+	skb_reset_transport_header(skb);
+
+	th = tcp_hdr(skb);
+	th->source              = inet->inet_sport;
+	th->dest                = inet->inet_dport;
+	th->seq                 = 0;
+	th->ack_seq             = 0;
+	th->window              = 0;
+	th->check		= 0;
+	th->urg_ptr		= 0;
+	*(((__be16 *)th) + 6)   = htons((sizeof(struct tcphdr) >> 2) << 12);
+
+	return sizeof(struct tcphdr);
+}
+EXPORT_SYMBOL_GPL(tcp_filter_skb);
+#endif
+
 struct proto tcp_prot = {
 	.name			= "TCP",
 	.owner			= THIS_MODULE,
+#if HAVE_SKBTRACE
+	.filter_skb		= tcp_filter_skb,
+#endif
 	.close			= tcp_close,
 	.connect		= tcp_v4_connect,
 	.disconnect		= tcp_disconnect,

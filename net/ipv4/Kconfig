@@ -426,6 +426,13 @@ config INET_UDP_DIAG
 	  Support for UDP socket monitoring interface used by the ss tool.
 	  If unsure, say Y.
 
+config SKBTRACE_IPV4
+	tristate "IPv4 protocol suite support for skbtrace"
+	depends on SKBTRACE
+	default m
+	---help---
+	  Support for IPv4 part of skbtrace.
+
 menuconfig TCP_CONG_ADVANCED
 	bool "TCP: advanced congestion control"
 	---help---

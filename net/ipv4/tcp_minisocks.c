@@ -23,6 +23,7 @@
 #include <linux/slab.h>
 #include <linux/sysctl.h>
 #include <linux/workqueue.h>
+#include <linux/skbtrace.h>
 #include <net/tcp.h>
 #include <net/inet_common.h>
 #include <net/xfrm.h>
@@ -260,6 +261,28 @@ kill:
 }
 EXPORT_SYMBOL(tcp_timewait_state_process);
 
+#if HAVE_SKBTRACE
+int tcp_tw_filter_skb(struct inet_timewait_sock *tw, struct sk_buff *skb)
+{
+	struct tcphdr *th;
+
+	skb_reset_transport_header(skb);
+
+	th = tcp_hdr(skb);
+	th->source              = tw->tw_sport;
+	th->dest                = tw->tw_dport;
+	th->seq                 = 0;
+	th->ack_seq             = 0;
+	th->window              = 0;
+	th->check		= 0;
+	th->urg_ptr		= 0;
+	*(((__be16 *)th) + 6)   = htons((sizeof(struct tcphdr) >> 2) << 12);
+
+	return sizeof(struct tcphdr);
+}
+EXPORT_SYMBOL_GPL(tcp_tw_filter_skb);
+#endif
+
 /*
  * Move a socket to time-wait or dead fin-wait-2 state.
  */
@@ -320,6 +343,15 @@ void tcp_time_wait(struct sock *sk, int state, int timeo)
 					BUG();
 			}
 		} while (0);
+#endif
+
+#if HAVE_SKBTRACE
+{
+		if (!tw->tw_skbtrace) {
+			tw->tw_skbtrace = sk->sk_skbtrace;
+			sock_skbtrace_reset(sk);
+		}
+}
 #endif
 
 		/* Linkage updates. */

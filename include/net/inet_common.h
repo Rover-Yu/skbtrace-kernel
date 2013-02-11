@@ -31,6 +31,8 @@ extern int inet_shutdown(struct socket *sock, int how);
 extern int inet_listen(struct socket *sock, int backlog);
 extern void inet_sock_destruct(struct sock *sk);
 extern int inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len);
+extern int inet_sock_getname(struct sock *sk, struct sockaddr *uaddr,
+			int *uaddr_len, int peer);
 extern int inet_getname(struct socket *sock, struct sockaddr *uaddr,
 			int *uaddr_len, int peer);
 extern int inet_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg);
