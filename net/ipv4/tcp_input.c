@@ -3026,6 +3026,7 @@ static void tcp_fastretrans_alert(struct sock *sk, int pkts_acked,
 void tcp_valid_rtt_meas(struct sock *sk, u32 seq_rtt)
 {
 	tcp_rtt_estimator(sk, seq_rtt);
+	trace_tcp_rttm(sk, seq_rtt);
 	tcp_set_rto(sk);
 	inet_csk(sk)->icsk_backoff = 0;
 }

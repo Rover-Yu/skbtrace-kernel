@@ -36,6 +36,7 @@ enum {
 	skbtrace_action_tcp_congestion	= 101,
 	skbtrace_action_tcp_connection	= 102,
 	skbtrace_action_tcp_active_conn	= 104,
+	skbtrace_action_tcp_rttm	= 105,
 	skbtrace_action_tcp_max		= 199,
 };
 
@@ -76,6 +77,19 @@ struct skbtrace_tcp_conn_blk {
 			struct sockaddr_in6 peer;
 		} inet6;
 	} addr;
+} __packed;
+
+/* TCP RTTM event (105) */
+struct skbtrace_tcp_rttm_blk {
+	struct skbtrace_block blk;
+	__u32 pad;
+	__u32 snd_una;
+	__u32 rtt_seq;
+	__u32 rtt;
+	__u32 rttvar;
+	__u32 srtt;
+	__u32 mdev;
+	__u32 mdev_max;
 } __packed;
 
 

@@ -364,6 +364,27 @@ SKBTRACE_SOCK_EVENT_BEGIN
 	skbtrace_probe(t, ctx, &b->blk);
 SKBTRACE_SOCK_EVENT_END
 
+static void skbtrace_tcp_rttm(struct skbtrace_tracepoint *t,
+					struct sock *sk, u32 seq_rtt)
+SKBTRACE_SOCK_EVENT_BEGIN
+	struct tcp_sock *tp = tcp_sk(sk);
+	struct skbtrace_tcp_rttm_blk blk, *b;
+	struct skbtrace_context *ctx;
+
+	ctx = skbtrace_context_get(sk);
+	b = skbtrace_block_get(t, ctx, &blk);
+	INIT_SKBTRACE_BLOCK(&b->blk, sk,
+			skbtrace_action_tcp_rttm, 0, sizeof(blk));
+	b->rtt_seq = tp->rtt_seq;
+	b->snd_una = tp->snd_una;
+	b->rtt = seq_rtt;
+	b->srtt = tp->srtt;
+	b->rttvar = tp->rttvar;
+	b->mdev = tp->mdev;
+	b->mdev_max = tp->mdev_max;
+	skbtrace_probe(t, ctx, &b->blk);
+SKBTRACE_SOCK_EVENT_END
+
 static struct skbtrace_tracepoint_probe tcp_connection_probe_list[] = {
 	{
 		.name = "tcp_connection",
@@ -397,6 +418,13 @@ static struct skbtrace_tracepoint tp_inet4[] = {
 		.action = skbtrace_action_tcp_active_conn,
 		.block_size = sizeof(struct skbtrace_tcp_conn_blk),
 		.probe = skbtrace_tcp_active_conn,
+		.has_sk_mark_option = 1,
+	},
+	{
+		.trace_name = "tcp_rttm",
+		.action = skbtrace_action_tcp_rttm,
+		.block_size = sizeof(struct skbtrace_tcp_rttm_blk),
+		.probe = skbtrace_tcp_rttm,
 		.has_sk_mark_option = 1,
 	},
 	EMPTY_SKBTRACE_TP

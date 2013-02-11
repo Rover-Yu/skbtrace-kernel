@@ -44,4 +44,8 @@ DECLARE_TRACE(tcp_active_conn,
 	TP_PROTO(void *sk),
 	TP_ARGS(sk));
 
+DECLARE_TRACE(tcp_rttm,
+	TP_PROTO(void *sk, __u32 seq_rtt),
+	TP_ARGS(sk, seq_rtt));
+
 #endif
