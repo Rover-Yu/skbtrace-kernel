@@ -201,7 +201,58 @@ struct sk_buff* skbtrace_get_twsk_filter_skb(struct inet_timewait_sock *tw)
 }
 EXPORT_SYMBOL_GPL(skbtrace_get_twsk_filter_skb);
 
+static char* tcp_cong_mask_names[] = {
+	"cwr",
+	"loss",
+	"fastrtx",
+	"frto",
+	"frto-loss",
+	"leave",
+};
+
+static int tcp_cong_mask_values[] = {
+	skbtrace_tcp_cong_cwr,
+	skbtrace_tcp_cong_loss,
+	skbtrace_tcp_cong_fastrtx,
+	skbtrace_tcp_cong_frto,
+	skbtrace_tcp_cong_frto_loss,
+	skbtrace_tcp_cong_leave,
+};
+
+static void skbtrace_tcp_congestion(struct skbtrace_tracepoint *t,
+					struct sock *sk, int reason)
+SKBTRACE_SOCK_EVENT_BEGIN
+	struct skbtrace_tcp_cong_blk blk, *b;
+	struct tcp_sock *tp;
+	struct skbtrace_context *ctx;
+
+	if (t->mask & (1<<reason))
+		return;
+
+	tp = tcp_sk(sk);
+	ctx = skbtrace_context_get(sk);
+	b = skbtrace_block_get(t, ctx, &blk);
+	INIT_SKBTRACE_BLOCK(&b->blk, tp,
+			skbtrace_action_tcp_congestion,
+			1 << reason,
+			sizeof(*b));
+	b->cwnd = tp->snd_cwnd * tp->mss_cache;
+	b->rto = inet_csk(sk)->icsk_rto;
+	b->snduna = tp->snd_una;
+	b->sndnxt = tp->snd_nxt;
+	skbtrace_probe(t, ctx, &b->blk);
+SKBTRACE_SOCK_EVENT_END
+
+
 static struct skbtrace_tracepoint tp_inet4[] = {
+	{
+		.trace_name = "tcp_congestion",
+		.action = skbtrace_action_tcp_congestion,
+		.block_size = sizeof(struct skbtrace_tcp_cong_blk),
+		.probe = skbtrace_tcp_congestion,
+		.has_sk_mark_option = 1,
+		MASK_OPTION_INIT(tcp_cong_mask_names, tcp_cong_mask_values),
+	},
 	EMPTY_SKBTRACE_TP
 };
 

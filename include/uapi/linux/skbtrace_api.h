@@ -78,5 +78,6 @@ enum {
 };
 
 #include <uapi/net/skbtrace_api_common.h>
+#include <uapi/net/skbtrace_api_ipv4.h>
 
 #endif
