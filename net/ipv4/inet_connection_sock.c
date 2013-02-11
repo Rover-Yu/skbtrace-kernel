@@ -24,6 +24,8 @@
 #include <net/tcp_states.h>
 #include <net/xfrm.h>
 
+#include <linux/skbtrace.h>
+#include <trace/events/skbtrace_common.h>
 #include <trace/events/skbtrace_ipv4.h>
 
 #ifdef INET_CSK_DEBUG
@@ -380,9 +382,16 @@ void inet_csk_init_xmit_timers(struct sock *sk,
 
 	setup_timer(&icsk->icsk_retransmit_timer, retransmit_handler,
 			(unsigned long)sk);
+	trace_sk_timer(sk, &icsk->icsk_retransmit_timer,
+						skbtrace_sk_timer_setup);
+
 	setup_timer(&icsk->icsk_delack_timer, delack_handler,
 			(unsigned long)sk);
+	trace_sk_timer(sk, &icsk->icsk_delack_timer, skbtrace_sk_timer_setup);
+
 	setup_timer(&sk->sk_timer, keepalive_handler, (unsigned long)sk);
+	trace_sk_timer(sk, &sk->sk_timer, skbtrace_sk_timer_setup);
+
 	icsk->icsk_pending = icsk->icsk_ack.pending = 0;
 }
 EXPORT_SYMBOL(inet_csk_init_xmit_timers);

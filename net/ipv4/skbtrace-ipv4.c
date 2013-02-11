@@ -444,6 +444,81 @@ SKBTRACE_SOCK_EVENT_BEGIN
 	skbtrace_probe(t, ctx, &b->blk);
 SKBTRACE_SOCK_EVENT_END
 
+static char* tcp_timer_mask_names[] = {
+	"setup",
+	"reset",
+	"stop",
+
+	"rexmit",
+	"probe",
+	"keepalive",
+	"delack",
+};
+
+static int tcp_timer_mask_values[] = {
+	skbtrace_sk_timer_setup,
+	skbtrace_sk_timer_reset,
+	skbtrace_sk_timer_stop,
+
+	skbtrace_tcp_timer_rexmit,
+	skbtrace_tcp_timer_probe,
+	skbtrace_tcp_timer_keepalive,
+	skbtrace_tcp_timer_delack,
+};
+
+static void skbtrace_tcp_timer(struct skbtrace_tracepoint *t,
+			struct sock *sk, struct timer_list *timer, int action)
+SKBTRACE_SOCK_EVENT_BEGIN
+	struct inet_connection_sock *icsk = inet_csk(sk);
+	struct skbtrace_sk_timer_blk blk, *b;
+	s32 f_timer, timeout;
+	u32 timer_bits;
+	struct skbtrace_context *ctx;
+
+	if (IPPROTO_TCP != sk->sk_protocol)
+		return;
+
+	if (t->mask & (1<<action))
+		return;
+
+	if (timer == &icsk->icsk_retransmit_timer) {
+		f_timer = (icsk->icsk_pending == ICSK_TIME_PROBE0 ?
+				skbtrace_tcp_timer_probe : skbtrace_tcp_timer_rexmit);
+	} else if (timer == &icsk->icsk_delack_timer)
+		f_timer = skbtrace_tcp_timer_delack;
+	else if (timer == &sk->sk_timer)
+		f_timer = skbtrace_tcp_timer_keepalive;
+	else
+		f_timer = 0;
+	timer_bits = f_timer ? (1<<f_timer) : 0;
+
+	if (t->mask & timer_bits)
+		return;
+
+	/* TCP rexmit timer and probe0 share same timer_list  */
+	if (f_timer == skbtrace_tcp_timer_rexmit
+			&& action == skbtrace_sk_timer_setup) {
+		if (t->mask & (1<<skbtrace_tcp_timer_probe))
+			return;
+		timer_bits |= 1<<skbtrace_tcp_timer_probe;
+	}
+
+	ctx = skbtrace_context_get(sk);
+	b = skbtrace_block_get(t, ctx, &blk);
+	INIT_SKBTRACE_BLOCK(&b->blk, sk,
+			skbtrace_action_sk_timer, 1<<action, sizeof(blk));
+	b->proto = IPPROTO_TCP;
+
+	if (skbtrace_sk_timer_reset == action)
+		timeout = jiffies_to_msecs(timer->expires - jiffies);
+	else
+		timeout = 0;
+
+	b->blk.flags |= timer_bits;
+	b->timeout = timeout;
+	skbtrace_probe(t, ctx, &b->blk);
+SKBTRACE_SOCK_EVENT_END
+
 static struct skbtrace_tracepoint_probe tcp_connection_probe_list[] = {
 	{
 		.name = "tcp_connection",
@@ -493,6 +568,15 @@ static struct skbtrace_tracepoint tp_inet4[] = {
 		.probe = skbtrace_tcp_ca_state,
 		.has_sk_mark_option = 1,
 		MASK_OPTION_INIT(tcp_ca_state_mask_names, tcp_ca_state_mask_values),
+	},
+	{
+		.trace_name = "tcp_timer",
+		.probe_name = "sk_timer",
+		.action = skbtrace_action_sk_timer,
+		.block_size = sizeof(struct skbtrace_sk_timer_blk),
+		.probe = skbtrace_tcp_timer,
+		.has_sk_mark_option = 1,
+		MASK_OPTION_INIT(tcp_timer_mask_names, tcp_timer_mask_values),
 	},
 	EMPTY_SKBTRACE_TP
 };

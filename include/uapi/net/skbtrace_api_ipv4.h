@@ -124,4 +124,12 @@ struct skbtrace_tcp_ca_state_blk {
 
 } __packed;
 
+/* TCP timer flags */
+enum {
+	skbtrace_tcp_timer_rexmit = skbtrace_sk_timer_last + 1,
+	skbtrace_tcp_timer_probe,
+	skbtrace_tcp_timer_keepalive,
+	skbtrace_tcp_timer_delack,
+};
+
 #endif
