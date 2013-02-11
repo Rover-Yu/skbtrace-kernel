@@ -266,4 +266,11 @@ config IPV6_PIMSM_V2
 	  Support for IPv6 PIM multicast routing protocol PIM-SMv2.
 	  If unsure, say N.
 
+config SKBTRACE_IPV6
+	tristate "IPv6 protocol suite support for skbtrace"
+	depends on SKBTRACE
+	default m
+	---help---
+	  Support for IPv6 part of skbtrace.
+
 endif # IPV6

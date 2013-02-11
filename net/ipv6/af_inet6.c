@@ -438,15 +438,10 @@ void inet6_destroy_sock(struct sock *sk)
 }
 EXPORT_SYMBOL_GPL(inet6_destroy_sock);
 
-/*
- *	This does both peername and sockname.
- */
-
-int inet6_getname(struct socket *sock, struct sockaddr *uaddr,
+int inet6_sock_getname(struct sock *sk, struct sockaddr *uaddr,
 		 int *uaddr_len, int peer)
 {
 	struct sockaddr_in6 *sin = (struct sockaddr_in6 *)uaddr;
-	struct sock *sk = sock->sk;
 	struct inet_sock *inet = inet_sk(sk);
 	struct ipv6_pinfo *np = inet6_sk(sk);
 
@@ -454,11 +449,6 @@ int inet6_getname(struct socket *sock, struct sockaddr *uaddr,
 	sin->sin6_flowinfo = 0;
 	sin->sin6_scope_id = 0;
 	if (peer) {
-		if (!inet->inet_dport)
-			return -ENOTCONN;
-		if (((1 << sk->sk_state) & (TCPF_CLOSE | TCPF_SYN_SENT)) &&
-		    peer == 1)
-			return -ENOTCONN;
 		sin->sin6_port = inet->inet_dport;
 		sin->sin6_addr = np->daddr;
 		if (np->sndflow)
@@ -473,8 +463,31 @@ int inet6_getname(struct socket *sock, struct sockaddr *uaddr,
 	}
 	if (ipv6_addr_type(&sin->sin6_addr) & IPV6_ADDR_LINKLOCAL)
 		sin->sin6_scope_id = sk->sk_bound_dev_if;
-	*uaddr_len = sizeof(*sin);
+	if (uaddr_len)
+		*uaddr_len = sizeof(*sin);
 	return 0;
+}
+EXPORT_SYMBOL(inet6_sock_getname);
+
+/*
+ *	This does both peername and sockname.
+ */
+
+int inet6_getname(struct socket *sock, struct sockaddr *uaddr,
+		 int *uaddr_len, int peer)
+{
+	struct sock *sk = sock->sk;
+	struct inet_sock *inet = inet_sk(sk);
+
+	if (peer) {
+		if (!inet->inet_dport)
+			return -ENOTCONN;
+		if (((1 << sk->sk_state) & (TCPF_CLOSE | TCPF_SYN_SENT)) &&
+		    peer == 1)
+			return -ENOTCONN;
+	}
+
+	return inet6_sock_getname(sk, uaddr, uaddr_len, peer);
 }
 EXPORT_SYMBOL(inet6_getname);
 

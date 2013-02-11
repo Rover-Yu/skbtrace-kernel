@@ -39,6 +39,7 @@ obj-$(CONFIG_NETFILTER)	+= netfilter/
 obj-$(CONFIG_IPV6_SIT) += sit.o
 obj-$(CONFIG_IPV6_TUNNEL) += ip6_tunnel.o
 obj-$(CONFIG_IPV6_GRE) += ip6_gre.o
+obj-${CONFIG_SKBTRACE_IPV6} += skbtrace-ipv6.o
 
 obj-y += addrconf_core.o exthdrs_core.o ip6_checksum.o
 obj-$(CONFIG_INET) += output_core.o protocol.o $(ipv6-offload)

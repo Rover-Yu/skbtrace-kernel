@@ -72,6 +72,8 @@
 #include <linux/crypto.h>
 #include <linux/scatterlist.h>
 
+#include <linux/skbtrace.h>
+
 static void	tcp_v6_send_reset(struct sock *sk, struct sk_buff *skb);
 static void	tcp_v6_reqsk_send_ack(struct sock *sk, struct sk_buff *skb,
 				      struct request_sock *req);
@@ -1924,6 +1926,9 @@ void tcp6_proc_exit(struct net *net)
 struct proto tcpv6_prot = {
 	.name			= "TCPv6",
 	.owner			= THIS_MODULE,
+#if HAVE_SKBTRACE
+	.filter_skb		= tcp_filter_skb,
+#endif
 	.close			= tcp_close,
 	.connect		= tcp_v6_connect,
 	.disconnect		= tcp_disconnect,
