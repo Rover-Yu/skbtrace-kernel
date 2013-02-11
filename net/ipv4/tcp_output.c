@@ -41,6 +41,7 @@
 #include <linux/compiler.h>
 #include <linux/gfp.h>
 #include <linux/module.h>
+#include <linux/skbtrace.h>
 #include <trace/events/skbtrace_ipv4.h>
 
 /* People can turn this off for buggy TCP's found in printers etc. */
@@ -1865,15 +1866,18 @@ static int tcp_mtu_probe(struct sock *sk)
 
 	if (tp->snd_wnd < size_needed)
 		return -1;
-	if (after(tp->snd_nxt + size_needed, tcp_wnd_end(tp)))
+	if (after(tp->snd_nxt + size_needed, tcp_wnd_end(tp))) {
+		trace_tcp_sendlimit(sk, skbtrace_tcp_sndlim_swnd, 1);
 		return 0;
-
+	}
 	/* Do we need to wait to drain cwnd? With none in flight, don't stall */
 	if (tcp_packets_in_flight(tp) + 2 > tp->snd_cwnd) {
 		if (!tcp_packets_in_flight(tp))
 			return -1;
-		else
+		else {
+			trace_tcp_sendlimit(sk, skbtrace_tcp_sndlim_cwnd, 1);
 			return 0;
+		}
 	}
 
 	/* We're allowed to probe.  Build it now. */
@@ -1944,6 +1948,7 @@ static int tcp_mtu_probe(struct sock *sk)
 		tp->mtu_probe.probe_seq_start = TCP_SKB_CB(nskb)->seq;
 		tp->mtu_probe.probe_seq_end = TCP_SKB_CB(nskb)->end_seq;
 
+		trace_tcp_sendlimit(sk, skbtrace_tcp_sndlim_ok, 1);
 		return 1;
 	}
 
@@ -1968,20 +1973,18 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	struct sk_buff *skb;
 	unsigned int tso_segs, sent_pkts;
 	int cwnd_quota;
-	int result;
-
-	sent_pkts = 0;
+	int retval, result, sndlim;
 
 	if (!push_one) {
 		/* Do MTU probing. */
 		result = tcp_mtu_probe(sk);
-		if (!result) {
+		if (!result)
 			return false;
-		} else if (result > 0) {
-			sent_pkts = 1;
-		}
 	}
 
+	sndlim = skbtrace_tcp_sndlim_ok;
+	result = 0;
+	sent_pkts = 0;
 	while ((skb = tcp_send_head(sk))) {
 		unsigned int limit;
 
@@ -1993,20 +1996,27 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 			goto repair; /* Skip network transmission */
 
 		cwnd_quota = tcp_cwnd_test(tp, skb);
-		if (!cwnd_quota)
+		if (!cwnd_quota) {
+			sndlim = skbtrace_tcp_sndlim_cwnd;
 			break;
+		}
 
-		if (unlikely(!tcp_snd_wnd_test(tp, skb, mss_now)))
+		if (unlikely(!tcp_snd_wnd_test(tp, skb, mss_now))) {
+			sndlim = skbtrace_tcp_sndlim_swnd;
 			break;
-
+		}
 		if (tso_segs == 1) {
 			if (unlikely(!tcp_nagle_test(tp, skb, mss_now,
-						     (tcp_skb_is_last(sk, skb) ?
-						      nonagle : TCP_NAGLE_PUSH))))
+					     (tcp_skb_is_last(sk, skb) ?
+					      nonagle : TCP_NAGLE_PUSH)))) {
+				sndlim = skbtrace_tcp_sndlim_nagle;
 				break;
+			}
 		} else {
-			if (!push_one && tcp_tso_should_defer(sk, skb))
+			if (!push_one && tcp_tso_should_defer(sk, skb)) {
+				sndlim = skbtrace_tcp_sndlim_tso;
 				break;
+			}
 		}
 
 		/* TSQ : sk_wmem_alloc accounts skb truesize,
@@ -2024,13 +2034,18 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 							  sk->sk_gso_max_segs));
 
 		if (skb->len > limit &&
-		    unlikely(tso_fragment(sk, skb, limit, mss_now, gfp)))
+		    unlikely(tso_fragment(sk, skb, limit, mss_now, gfp))) {
+			sndlim = skbtrace_tcp_sndlim_frag;
 			break;
+		}
 
 		TCP_SKB_CB(skb)->when = tcp_time_stamp;
 
-		if (unlikely(tcp_transmit_skb(sk, skb, 1, gfp)))
+		result = tcp_transmit_skb(sk, skb, 1, gfp);
+		if (unlikely(result)) {
+			sndlim = skbtrace_tcp_sndlim_other;
 			break;
+		}
 
 repair:
 		/* Advance the send_head.  This one is sent out.
@@ -2041,17 +2056,25 @@ repair:
 		tcp_minshall_update(tp, mss_now, skb);
 		sent_pkts += tcp_skb_pcount(skb);
 
-		if (push_one)
+		if (push_one) {
+			sndlim = skbtrace_tcp_sndlim_pushone;
 			break;
+		}
 	}
 
 	if (likely(sent_pkts)) {
 		if (tcp_in_cwnd_reduction(sk))
 			tp->prr_out += sent_pkts;
+		trace_tcp_sendlimit(sk, skbtrace_tcp_sndlim_ok, sent_pkts);
 		tcp_cwnd_validate(sk);
-		return false;
-	}
-	return !tp->packets_out && tcp_send_head(sk);
+		retval = false;
+	} else
+		retval = !tp->packets_out && tcp_send_head(sk);
+
+	if (skbtrace_tcp_sndlim_ok != sndlim)
+		trace_tcp_sendlimit(sk, sndlim, result);
+
+	return retval;
 }
 
 /* Push out any pending frames which were held back due to

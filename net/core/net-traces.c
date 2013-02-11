@@ -49,6 +49,7 @@ NEW_SKBTRACE_TP(sk_timer);
 NEW_SKBTRACE_TP(tcp_congestion);
 NEW_SKBTRACE_TP(tcp_connection);
 NEW_SKBTRACE_TP(icsk_connection);
+NEW_SKBTRACE_TP(tcp_sendlimit);
 NEW_SKBTRACE_TP(tcp_active_conn);
 NEW_SKBTRACE_TP(tcp_rttm);
 NEW_SKBTRACE_TP(tcp_ca_state);

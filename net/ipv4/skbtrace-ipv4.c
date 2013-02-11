@@ -340,6 +340,60 @@ SKBTRACE_SOCK_EVENT_BEGIN
 	skbtrace_probe(t, ctx, &b->blk);
 SKBTRACE_SOCK_EVENT_END
 
+static char* tcp_sendlimit_mask_names[] = {
+	"cwnd",
+	"swnd",
+	"nagle",
+	"tso",
+	"frag",
+	"pushone",
+	"other",
+	"ok",
+};
+
+static int tcp_sendlimit_mask_values[] = {
+	skbtrace_tcp_sndlim_cwnd,
+	skbtrace_tcp_sndlim_swnd,
+	skbtrace_tcp_sndlim_nagle,
+	skbtrace_tcp_sndlim_tso,
+	skbtrace_tcp_sndlim_frag,
+	skbtrace_tcp_sndlim_pushone,
+	skbtrace_tcp_sndlim_other,
+	skbtrace_tcp_sndlim_ok,
+};
+
+static void skbtrace_tcp_sendlimit(struct skbtrace_tracepoint *t,
+		struct sock *sk, int reason, int val)
+SKBTRACE_SOCK_EVENT_BEGIN
+	struct skbtrace_tcp_sendlim_blk blk, *b;
+	struct tcp_sock *tp = tcp_sk(sk);
+	struct skbtrace_context *ctx;
+
+	if (t->mask & (1<<reason))
+		return;
+
+	if (skbtrace_tcp_sndlim_ok == reason && !val)
+		return;
+
+	ctx = skbtrace_context_get(sk);
+	b = skbtrace_block_get(t, ctx, &blk);
+	INIT_SKBTRACE_BLOCK(&b->blk, tp,
+			skbtrace_action_tcp_sendlimit,
+			1 << reason,
+			sizeof(*b));
+
+	b->val = val;
+	b->count = 1;
+	b->begin = current_kernel_time();
+
+	b->snd_ssthresh = tp->snd_ssthresh;
+	b->snd_cwnd = tp->snd_cwnd;
+	b->snd_cwnd_cnt = tp->snd_cwnd_cnt;
+	b->snd_wnd = tp->snd_wnd;
+
+	skbtrace_probe(t, ctx, &b->blk);
+SKBTRACE_SOCK_EVENT_END
+
 static void skbtrace_tcp_active_conn(struct skbtrace_tracepoint *t,
 							struct sock *sk)
 SKBTRACE_SOCK_EVENT_BEGIN
@@ -546,6 +600,14 @@ static struct skbtrace_tracepoint tp_inet4[] = {
 		.block_size = sizeof(struct skbtrace_tcp_conn_blk),
 		.probe_list = tcp_connection_probe_list,
 		.has_sk_mark_option = 1,
+	},
+	{
+		.trace_name = "tcp_sendlimit",
+		.action = skbtrace_action_tcp_sendlimit,
+		.block_size = sizeof(struct skbtrace_tcp_sendlim_blk),
+		.probe = skbtrace_tcp_sendlimit,
+		.has_sk_mark_option = 1,
+		MASK_OPTION_INIT(tcp_sendlimit_mask_names, tcp_sendlimit_mask_values),
 	},
 	{
 		.trace_name = "tcp_active_conn",

@@ -40,6 +40,10 @@ DECLARE_TRACE(tcp_connection,
 	TP_PROTO(void *sk, __u32 state),
 	TP_ARGS(sk, state));
 
+DECLARE_TRACE(tcp_sendlimit,
+	TP_PROTO(void *sk, int reason, int val),
+	TP_ARGS(sk, reason, val));
+
 DECLARE_TRACE(tcp_active_conn,
 	TP_PROTO(void *sk),
 	TP_ARGS(sk));

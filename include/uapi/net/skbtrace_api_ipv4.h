@@ -35,6 +35,7 @@ enum {
 	skbtrace_action_tcp_min		= 101,
 	skbtrace_action_tcp_congestion	= 101,
 	skbtrace_action_tcp_connection	= 102,
+	skbtrace_action_tcp_sendlimit	= 103,
 	skbtrace_action_tcp_active_conn	= 104,
 	skbtrace_action_tcp_rttm	= 105,
 	skbtrace_action_tcp_ca_state	= 106,
@@ -78,6 +79,34 @@ struct skbtrace_tcp_conn_blk {
 			struct sockaddr_in6 peer;
 		} inet6;
 	} addr;
+} __packed;
+
+/* TCP send limit event (103) */
+enum {
+	skbtrace_tcp_sndlim_cwnd	= 0,
+	skbtrace_tcp_sndlim_swnd	= 1,
+	skbtrace_tcp_sndlim_nagle	= 2,
+	skbtrace_tcp_sndlim_tso		= 3,
+	skbtrace_tcp_sndlim_frag	= 4,	/* most likely ENOMEM errors */
+	skbtrace_tcp_sndlim_pushone	= 5,
+	skbtrace_tcp_sndlim_other	= 6,
+	skbtrace_tcp_sndlim_ok		= 7,
+};
+
+/* val member:
+ *    skbtrace_tcp_sndlim_other: the return value of tcp_transmit_skb()
+ *    skbtrace_tcp_sndlim_ok: total sent pkts
+ *    other cases: send limit occurs under MTU probe if 1, otherwise, it is 0
+ */
+struct skbtrace_tcp_sendlim_blk {
+	struct skbtrace_block blk;
+	__u32 val;
+	__u32 count;
+	struct timespec begin;
+	__u32	snd_ssthresh;
+	__u32	snd_cwnd;
+	__u32	snd_cwnd_cnt;
+	__u32	snd_wnd;
 } __packed;
 
 /* TCP RTTM event (105) */
