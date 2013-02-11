@@ -43,6 +43,9 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(napi_poll);
 	DEFINE_TRACE(name); \
 	EXPORT_TRACEPOINT_SYMBOL_GPL(name);
 
+NEW_SKBTRACE_TP(skb_rps_info);
+NEW_SKBTRACE_TP(sk_timer);
+
 unsigned long skbtrace_session;
 EXPORT_SYMBOL(skbtrace_session);
 

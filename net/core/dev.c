@@ -129,6 +129,7 @@
 #include <trace/events/napi.h>
 #include <trace/events/net.h>
 #include <trace/events/skb.h>
+#include <trace/events/skbtrace_common.h>
 #include <linux/skbtrace.h>
 #include <linux/pci.h>
 #include <linux/inetdevice.h>
@@ -3040,6 +3041,7 @@ static int get_rps_cpu(struct net_device *dev, struct sk_buff *skb,
 	}
 
 done:
+	trace_skb_rps_info(skb, dev, cpu);
 	return cpu;
 }
 

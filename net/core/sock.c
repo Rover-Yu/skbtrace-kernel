@@ -135,6 +135,7 @@
 #include <linux/skbtrace.h>
 
 #include <trace/events/sock.h>
+#include <trace/events/skbtrace_common.h>
 
 #ifdef CONFIG_INET
 #include <net/tcp.h>
@@ -2231,6 +2232,7 @@ void sk_reset_timer(struct sock *sk, struct timer_list* timer,
 {
 	if (!mod_timer(timer, expires))
 		sock_hold(sk);
+	trace_sk_timer(sk, timer, skbtrace_sk_timer_reset);
 }
 EXPORT_SYMBOL(sk_reset_timer);
 
@@ -2238,6 +2240,7 @@ void sk_stop_timer(struct sock *sk, struct timer_list* timer)
 {
 	if (del_timer(timer))
 		__sock_put(sk);
+	trace_sk_timer(sk, timer, skbtrace_sk_timer_stop);
 }
 EXPORT_SYMBOL(sk_stop_timer);
 

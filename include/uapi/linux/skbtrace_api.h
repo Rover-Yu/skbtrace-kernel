@@ -77,4 +77,6 @@ enum {
 	skbtrace_flags_reserved_max = 31,
 };
 
+#include <uapi/net/skbtrace_api_common.h>
+
 #endif

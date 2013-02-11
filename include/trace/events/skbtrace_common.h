@@ -28,9 +28,14 @@
 
 struct sk_buff;
 struct net_device;
+struct timer_list;
 
 DECLARE_TRACE(skb_rps_info,
 	TP_PROTO(struct sk_buff *skb, struct net_device *dev, int cpu),
 	TP_ARGS(skb, dev, cpu));
+
+DECLARE_TRACE(sk_timer,
+	TP_PROTO(void *sk, struct timer_list *timer, int action),
+	TP_ARGS(sk, timer, action));
 
 #endif

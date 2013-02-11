@@ -29,6 +29,7 @@
 enum {
 	skbtrace_action_common_min	= 1,
 	skbtrace_action_skb_rps_info	= 1,
+	skbtrace_action_sk_timer	= 2,
 	skbtrace_action_common_max	= 99,
 };
 
@@ -51,6 +52,21 @@ struct skbtrace_skb_rps_info_blk {
 	__u32 cpu;
 	__u32 ifindex;
 	struct skbtrace_flow_keys keys;
+} __packed;
+
+/* socket timers */
+/* flags */
+enum {
+	skbtrace_sk_timer_setup	= 0,
+	skbtrace_sk_timer_reset	= 1,
+	skbtrace_sk_timer_stop	= 2,
+	skbtrace_sk_timer_last	= 3,
+};
+
+struct skbtrace_sk_timer_blk {
+	struct skbtrace_block blk;
+	__s32	proto;
+	__s32	timeout;
 } __packed;
 
 #endif
