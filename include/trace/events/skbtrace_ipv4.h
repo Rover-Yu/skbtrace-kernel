@@ -32,4 +32,12 @@ DECLARE_TRACE(tcp_congestion,
 	TP_PROTO(void *sk, int reason),
 	TP_ARGS(sk, reason));
 
+DECLARE_TRACE(icsk_connection,
+	TP_PROTO(void *sk, __u32 state),
+	TP_ARGS(sk, state));
+
+DECLARE_TRACE(tcp_connection,
+	TP_PROTO(void *sk, __u32 state),
+	TP_ARGS(sk, state));
+
 #endif

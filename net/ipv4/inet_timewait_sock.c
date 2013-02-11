@@ -17,6 +17,7 @@
 #include <net/inet_timewait_sock.h>
 #include <net/ip.h>
 
+#include <trace/events/skbtrace_ipv4.h>
 
 /**
  *	inet_twsk_unhash - unhash a timewait socket from established hash
@@ -211,6 +212,7 @@ struct inet_timewait_sock *inet_twsk_alloc(const struct sock *sk, const int stat
 		atomic_set(&tw->tw_refcnt, 0);
 		inet_twsk_dead_node_init(tw);
 		__module_get(tw->tw_prot->owner);
+		trace_tcp_connection(tw, state + TCP_MAX_STATES);
 	}
 
 	return tw;

@@ -86,6 +86,7 @@
 #include <linux/scatterlist.h>
 
 #include <linux/skbtrace.h>
+#include <trace/events/skbtrace_ipv4.h>
 
 int sysctl_tcp_tw_reuse __read_mostly;
 int sysctl_tcp_low_latency __read_mostly;
@@ -1758,7 +1759,7 @@ struct sock *tcp_v4_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
 	if (__inet_inherit_port(sk, newsk) < 0)
 		goto put_and_exit;
 	__inet_hash_nolisten(newsk, NULL);
-
+	trace_tcp_connection(newsk, TCP_SYN_RECV);
 	return newsk;
 
 exit_overflow:

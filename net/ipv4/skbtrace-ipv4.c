@@ -243,6 +243,115 @@ SKBTRACE_SOCK_EVENT_BEGIN
 	skbtrace_probe(t, ctx, &b->blk);
 SKBTRACE_SOCK_EVENT_END
 
+static void skbtrace_tcp_connection(struct skbtrace_tracepoint *t,
+							void *ptr, u32 state)
+{
+	struct sock *sk = ptr;
+	struct inet_timewait_sock *tw = inet_twsk(ptr);
+	struct skbtrace_context *ctx;
+
+	switch (state) {
+	case TCP_TIME_WAIT + TCP_MAX_STATES:
+	case TCP_FIN_WAIT2 + TCP_MAX_STATES:
+		{
+			struct skbtrace_tcp_conn_blk blk, *b;
+			struct skbtrace_context *ctx;
+
+			if (skbtrace_bypass_twsk(tw))
+				return;
+
+			ctx = skbtrace_context_twsk_get(tw);
+			b = skbtrace_block_get(t, ctx, &blk);
+			state -= TCP_MAX_STATES;
+			INIT_SKBTRACE_BLOCK(&b->blk, tw,
+				skbtrace_action_tcp_connection,
+				1 << state,
+				sizeof(blk));
+			b->addr.inet.local.sin_family = AF_INET;
+			b->addr.inet.local.sin_port = tw->tw_sport;
+			b->addr.inet.local.sin_addr.s_addr = tw->tw_rcv_saddr;
+			b->addr.inet.peer.sin_family = AF_INET;
+			b->addr.inet.peer.sin_port = tw->tw_dport;
+			b->addr.inet.peer.sin_addr.s_addr = tw->tw_daddr;
+			skbtrace_probe(t, ctx, &b->blk);
+			break;
+		}
+	case TCP_ESTABLISHED:
+	case TCP_FIN_WAIT1:
+	case TCP_CLOSE:
+	case TCP_CLOSE_WAIT:
+	case TCP_LAST_ACK:
+	case TCP_SYN_SENT:
+	case TCP_SYN_RECV:
+	case TCP_CLOSING:
+		{
+			struct skbtrace_tcp_conn_blk blk, *b;
+			struct skbtrace_ops *ops;
+
+			if (skbtrace_bypass_sock(t, sk))
+				return;
+
+			if (TCP_CLOSE == sk->sk_state &&
+				SHUTDOWN_MASK == sk->sk_shutdown)
+				/* for active TCP connections, we will call
+				 * tcp_set_state(sk, TCP_CLOSE) two times,
+				 * this hack help skip second one */
+				return;
+
+			ops = skbtrace_ops_get(sk->sk_family);
+			if (!ops)
+				return;
+
+			ctx = skbtrace_context_get(sk);
+			b = skbtrace_block_get(t, ctx, &blk);
+			INIT_SKBTRACE_BLOCK(&b->blk, ptr,
+				skbtrace_action_tcp_connection,
+				1 << state,
+				sizeof(blk));
+			ops->getname(sk, &b->addr.local, NULL, 0);
+			if (TCP_LISTEN != state)
+				ops->getname(sk, &b->addr.peer, NULL, 1);
+			skbtrace_probe(t, ctx, &b->blk);
+			break;
+		}
+	}
+}
+
+static void skbtrace_icsk_connection(struct skbtrace_tracepoint *t,
+						struct sock *sk, u32 state)
+SKBTRACE_SOCK_EVENT_BEGIN
+	struct skbtrace_tcp_conn_blk blk, *b;
+	struct skbtrace_ops *ops;
+	struct skbtrace_context *ctx;
+
+	if (TCP_LISTEN != state)
+		return;
+	ops = skbtrace_ops_get(sk->sk_family);
+	if (!ops)
+		return;
+
+	ctx = skbtrace_context_get(sk);
+	b = skbtrace_block_get(t, ctx, &blk);
+	INIT_SKBTRACE_BLOCK(&b->blk, sk,
+				skbtrace_action_tcp_connection,
+				1 << state,
+				sizeof(blk));
+	ops->getname(sk, &b->addr.local, NULL, 0);
+	skbtrace_probe(t, ctx, &b->blk);
+SKBTRACE_SOCK_EVENT_END
+
+
+static struct skbtrace_tracepoint_probe tcp_connection_probe_list[] = {
+	{
+		.name = "tcp_connection",
+		.probe = skbtrace_tcp_connection,
+	},
+	{
+		.name = "icsk_connection",
+		.probe = skbtrace_icsk_connection,
+	},
+	EMPTY_SKBTRACE_TP_PROBE_LIST
+};
 
 static struct skbtrace_tracepoint tp_inet4[] = {
 	{
@@ -252,6 +361,13 @@ static struct skbtrace_tracepoint tp_inet4[] = {
 		.probe = skbtrace_tcp_congestion,
 		.has_sk_mark_option = 1,
 		MASK_OPTION_INIT(tcp_cong_mask_names, tcp_cong_mask_values),
+	},
+	{
+		.trace_name = "tcp_connection",
+		.action = skbtrace_action_tcp_connection,
+		.block_size = sizeof(struct skbtrace_tcp_conn_blk),
+		.probe_list = tcp_connection_probe_list,
+		.has_sk_mark_option = 1,
 	},
 	EMPTY_SKBTRACE_TP
 };

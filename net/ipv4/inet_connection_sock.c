@@ -24,6 +24,8 @@
 #include <net/tcp_states.h>
 #include <net/xfrm.h>
 
+#include <trace/events/skbtrace_ipv4.h>
+
 #ifdef INET_CSK_DEBUG
 const char inet_csk_timer_bug_msg[] = "inet_csk BUG: unknown timer value\n";
 EXPORT_SYMBOL(inet_csk_timer_bug_msg);
@@ -773,6 +775,7 @@ int inet_csk_listen_start(struct sock *sk, const int nr_table_entries)
 
 		sk_dst_reset(sk);
 		sk->sk_prot->hash(sk);
+		trace_icsk_connection(sk, TCP_LISTEN);
 
 		return 0;
 	}

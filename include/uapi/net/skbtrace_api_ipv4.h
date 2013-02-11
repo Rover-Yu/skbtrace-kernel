@@ -34,6 +34,7 @@
 enum {
 	skbtrace_action_tcp_min		= 101,
 	skbtrace_action_tcp_congestion	= 101,
+	skbtrace_action_tcp_connection	= 102,
 	skbtrace_action_tcp_max		= 199,
 };
 
@@ -56,5 +57,25 @@ struct skbtrace_tcp_cong_blk {
 	__u32	sndnxt;
 	__u32	snduna;
 } __packed;
+
+/* TCP basic connection event (102) */
+struct skbtrace_tcp_conn_blk {
+	struct skbtrace_block blk;
+	union {
+		struct {
+			struct sockaddr local;
+			struct sockaddr peer;
+		};
+		struct {
+			struct sockaddr_in local;
+			struct sockaddr_in peer;
+		} inet;
+		struct {
+			struct sockaddr_in6 local;
+			struct sockaddr_in6 peer;
+		} inet6;
+	} addr;
+} __packed;
+
 
 #endif

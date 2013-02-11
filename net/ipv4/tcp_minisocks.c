@@ -27,6 +27,7 @@
 #include <net/tcp.h>
 #include <net/inet_common.h>
 #include <net/xfrm.h>
+#include <trace/events/skbtrace_ipv4.h>
 
 int sysctl_tcp_syncookies __read_mostly = 1;
 EXPORT_SYMBOL(sysctl_tcp_syncookies);
@@ -146,6 +147,7 @@ kill_with_rst:
 
 		/* FIN arrived, enter true time-wait state. */
 		tw->tw_substate	  = TCP_TIME_WAIT;
+		trace_tcp_connection(tw, TCP_TIME_WAIT + TCP_MAX_STATES);
 		tcptw->tw_rcv_nxt = TCP_SKB_CB(skb)->end_seq;
 		if (tmp_opt.saw_tstamp) {
 			tcptw->tw_ts_recent_stamp = get_seconds();
