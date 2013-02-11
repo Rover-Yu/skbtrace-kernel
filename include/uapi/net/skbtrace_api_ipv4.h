@@ -37,6 +37,7 @@ enum {
 	skbtrace_action_tcp_connection	= 102,
 	skbtrace_action_tcp_active_conn	= 104,
 	skbtrace_action_tcp_rttm	= 105,
+	skbtrace_action_tcp_ca_state	= 106,
 	skbtrace_action_tcp_max		= 199,
 };
 
@@ -92,5 +93,35 @@ struct skbtrace_tcp_rttm_blk {
 	__u32 mdev_max;
 } __packed;
 
+/* TCP CA state */
+struct skbtrace_tcp_ca_state_blk {
+	struct skbtrace_block blk;
+
+        __u32	cwnd;
+        __u32	rto;
+        __u32	snduna;
+        __u32	sndnxt;
+
+        __u32	snd_ssthresh;
+        __u32	snd_wnd;
+        __u32	rcv_wnd;
+        __u32	high_seq;
+
+        __u32	packets_out;
+        __u32	lost_out;
+        __u32	retrans_out;
+        __u32	sacked_out;
+
+        __u32	fackets_out;
+        __u32	prior_ssthresh;
+        __u32	undo_marker;
+        __u32	undo_retrans;
+
+        __u32	total_retrans;
+        __u32	reordering;
+        __u32	prior_cwnd;
+        __u32	mss_cache;
+
+} __packed;
 
 #endif

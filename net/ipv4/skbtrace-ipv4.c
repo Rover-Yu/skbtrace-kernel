@@ -385,6 +385,65 @@ SKBTRACE_SOCK_EVENT_BEGIN
 	skbtrace_probe(t, ctx, &b->blk);
 SKBTRACE_SOCK_EVENT_END
 
+static char* tcp_ca_state_mask_names[] = {
+	"open",
+	"disorder",
+	"cwr",
+	"recovery",
+	"loss",
+};
+
+static int tcp_ca_state_mask_values[] = {
+	TCP_CA_Open,
+	TCP_CA_Disorder,
+	TCP_CA_CWR,
+	TCP_CA_Recovery,
+	TCP_CA_Loss,
+};
+
+static void skbtrace_tcp_ca_state(struct skbtrace_tracepoint *t,
+					struct sock *sk, u8 state)
+SKBTRACE_SOCK_EVENT_BEGIN
+	struct tcp_sock *tp = tcp_sk(sk);
+	struct skbtrace_tcp_ca_state_blk blk, *b;
+	struct skbtrace_context *ctx;
+
+	if (t->mask & (1<<state))
+		return;
+
+	ctx = skbtrace_context_get(sk);
+	b = skbtrace_block_get(t, ctx, &blk);
+	INIT_SKBTRACE_BLOCK(&b->blk, sk,
+			skbtrace_action_tcp_ca_state, 1<<state, sizeof(blk));
+
+	b->cwnd = tp->snd_cwnd;
+	b->rto = inet_csk(sk)->icsk_rto;
+	b->snduna = tp->snd_una;
+	b->sndnxt = tp->snd_nxt;
+
+	b->snd_ssthresh = tp->snd_ssthresh;
+	b->snd_wnd = tp->snd_wnd;
+	b->rcv_wnd = tp->rcv_wnd;
+	b->high_seq = tp->high_seq;
+
+	b->packets_out = tp->packets_out;
+	b->lost_out = tp->lost_out;
+	b->retrans_out = tp->retrans_out;
+	b->sacked_out = tp->sacked_out;
+
+	b->fackets_out = tp->fackets_out;
+	b->prior_ssthresh = tp->prior_ssthresh;
+	b->undo_marker = tp->undo_marker;
+	b->undo_retrans = tp->undo_retrans;
+
+	b->total_retrans =  tp->total_retrans;
+	b->reordering = tp->reordering;
+	b->prior_cwnd = tp->prior_cwnd;
+	b->mss_cache = tp->mss_cache;
+
+	skbtrace_probe(t, ctx, &b->blk);
+SKBTRACE_SOCK_EVENT_END
+
 static struct skbtrace_tracepoint_probe tcp_connection_probe_list[] = {
 	{
 		.name = "tcp_connection",
@@ -426,6 +485,14 @@ static struct skbtrace_tracepoint tp_inet4[] = {
 		.block_size = sizeof(struct skbtrace_tcp_rttm_blk),
 		.probe = skbtrace_tcp_rttm,
 		.has_sk_mark_option = 1,
+	},
+	{
+		.trace_name = "tcp_ca_state",
+		.action = skbtrace_action_tcp_ca_state,
+		.block_size = sizeof(struct skbtrace_tcp_ca_state_blk),
+		.probe = skbtrace_tcp_ca_state,
+		.has_sk_mark_option = 1,
+		MASK_OPTION_INIT(tcp_ca_state_mask_names, tcp_ca_state_mask_values),
 	},
 	EMPTY_SKBTRACE_TP
 };

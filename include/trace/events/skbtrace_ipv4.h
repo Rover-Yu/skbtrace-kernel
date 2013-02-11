@@ -48,4 +48,8 @@ DECLARE_TRACE(tcp_rttm,
 	TP_PROTO(void *sk, __u32 seq_rtt),
 	TP_ARGS(sk, seq_rtt));
 
+DECLARE_TRACE(tcp_ca_state,
+	TP_PROTO(void *sk, __u8 state),
+	TP_ARGS(sk, state));
+
 #endif
