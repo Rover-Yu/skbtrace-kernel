@@ -360,6 +360,8 @@ typedef unsigned char *sk_buff_data_t;
  *	@peeked: this packet has been seen already, so stats have been
  *		done for it, don't do them again
  *	@nf_trace: netfilter packet trace flag
+ *	@hit_skbtrace: is this should be skipped by skbtrace filter?
+ *	@skbtrace_filtered: is this already processed by skbtrace filter?
  *	@protocol: Packet protocol from driver
  *	@destructor: Destruct function
  *	@nfct: Associated connection, if any
@@ -486,7 +488,10 @@ struct sk_buff {
 	 * headers if needed
 	 */
 	__u8			encapsulation:1;
-	/* 7/9 bit hole (depending on ndisc_nodetype presence) */
+#if defined(CONFIG_SKBTRACE) || defined(CONFIG_SKBTRACE_MODULE)
+	__u8			hit_skbtrace:1;
+	__u8			skbtrace_filtered:1;
+#endif
 	kmemcheck_bitfield_end(flags2);
 
 #ifdef CONFIG_NET_DMA

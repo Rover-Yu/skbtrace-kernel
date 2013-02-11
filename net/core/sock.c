@@ -132,6 +132,7 @@
 #include <net/netprio_cgroup.h>
 
 #include <linux/filter.h>
+#include <linux/skbtrace.h>
 
 #include <trace/events/sock.h>
 
@@ -1347,6 +1348,7 @@ struct sock *sk_alloc(struct net *net, int family, gfp_t priority,
 
 		sock_update_classid(sk, current);
 		sock_update_netprioidx(sk, current);
+		sock_skbtrace_reset(sk);
 	}
 
 	return sk;
@@ -1366,6 +1368,8 @@ static void __sk_free(struct sock *sk)
 		sk_filter_uncharge(sk, filter);
 		RCU_INIT_POINTER(sk->sk_filter, NULL);
 	}
+
+	skbtrace_context_destroy(&sk->sk_skbtrace);
 
 	sock_disable_timestamp(sk, SK_FLAGS_TIMESTAMP);
 
@@ -1515,6 +1519,8 @@ struct sock *sk_clone_lock(const struct sock *sk, const gfp_t priority)
 
 		if (newsk->sk_flags & SK_FLAGS_TIMESTAMP)
 			net_enable_timestamp();
+
+		sock_skbtrace_reset(newsk);
 	}
 out:
 	return newsk;

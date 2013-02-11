@@ -378,6 +378,14 @@ config BLK_DEV_IO_TRACE
 
 	  If unsure, say N.
 
+config SKBTRACE
+	tristate "skbtrace : flexible networking tracing"
+	help
+	  A blktrace like utility for networking subsystem, you can enable this feature
+	  as a kernel module.
+
+	  If unsure, say N.
+
 config KPROBE_EVENT
 	depends on KPROBES
 	depends on HAVE_REGS_AND_STACK_ACCESS_API

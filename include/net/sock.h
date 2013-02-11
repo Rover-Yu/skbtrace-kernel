@@ -210,6 +210,8 @@ struct sock_common {
 };
 
 struct cg_proto;
+struct skbtrace_context;
+
 /**
   *	struct sock - network layer representation of sockets
   *	@__sk_common: shared layout with inet_timewait_sock
@@ -352,7 +354,12 @@ struct sock {
 				sk_userlocks : 4,
 				sk_protocol  : 8,
 				sk_type      : 16;
+#if defined(CONFIG_SKBTRACE) || defined(CONFIG_SKBTRACE_MODULE)
+	unsigned int		sk_hit_skbtrace : 1,
+				sk_skbtrace_filtered : 1;
+#endif
 	kmemcheck_bitfield_end(flags);
+	unsigned int		sk_skbtrace_fid;
 	int			sk_wmem_queued;
 	gfp_t			sk_allocation;
 	netdev_features_t	sk_route_caps;
@@ -392,6 +399,9 @@ struct sock {
 	__u32			sk_mark;
 	u32			sk_classid;
 	struct cg_proto		*sk_cgrp;
+#if defined(CONFIG_SKBTRACE) || defined(CONFIG_SKBTRACE_MODULE)
+	struct skbtrace_context *sk_skbtrace;
+#endif
 	void			(*sk_state_change)(struct sock *sk);
 	void			(*sk_data_ready)(struct sock *sk, int bytes);
 	void			(*sk_write_space)(struct sock *sk);
@@ -871,6 +881,10 @@ struct module;
  * transport -> network interface is defined by struct inet_proto
  */
 struct proto {
+#if defined(CONFIG_SKBTRACE) || defined(CONFIG_SKBTRACE_MODULE)
+	int			(*filter_skb)(struct sock *sk,
+					struct sk_buff *skb);
+#endif
 	void			(*close)(struct sock *sk,
 					long timeout);
 	int			(*connect)(struct sock *sk,

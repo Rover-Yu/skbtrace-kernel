@@ -70,6 +70,7 @@
 #include <asm/uaccess.h>
 #include <trace/events/skb.h>
 #include <linux/highmem.h>
+#include <linux/skbtrace.h>
 
 struct kmem_cache *skbuff_head_cache __read_mostly;
 static struct kmem_cache *skbuff_fclone_cache __read_mostly;
@@ -693,6 +694,10 @@ static void __copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 	new->l4_rxhash		= old->l4_rxhash;
 	new->no_fcs		= old->no_fcs;
 	new->encapsulation	= old->encapsulation;
+#if HAVE_SKBTRACE
+	new->hit_skbtrace	= old->hit_skbtrace;
+	new->skbtrace_filtered	= old->skbtrace_filtered;
+#endif
 #ifdef CONFIG_XFRM
 	new->sp			= secpath_get(old->sp);
 #endif
