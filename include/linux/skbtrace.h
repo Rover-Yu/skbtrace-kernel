@@ -402,7 +402,7 @@ static inline void* skbtrace_block_get(struct skbtrace_tracepoint *tp,
 		return fast;
 
 	pri = tp->primary;
-	if (ctx) {
+	if (ctx) { /* use secondary buffer of current socket first */
 		struct secondary_buffer *buf;
 		struct secondary_table *table;
 
