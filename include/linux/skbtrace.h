@@ -44,10 +44,14 @@
 
 #if HAVE_SKBTRACE
 
+#define SKBTRACE_DYN_BLOCK_MAGIC	(~SKBTRACE_BLOCK_MAGIC)
+
+#define SKBTRACE_BLOCK_MAXSIZE	(128)
+
 /* The size parameters of secondary_buffer->slots */
 #define SECONDARY_BUFFER_ORDER	0
 #define SECONDARY_BUFFER_SIZE	(PAGE_SIZE<<SECONDARY_BUFFER_ORDER)
-#define SECONDARY_BUFFER_UNIT	(128)
+#define SECONDARY_BUFFER_UNIT	SKBTRACE_BLOCK_MAXSIZE
 #define SECONDARY_BUFFER_COUNTS	(SECONDARY_BUFFER_SIZE/SECONDARY_BUFFER_UNIT)
 
 struct secondary_buffer {
@@ -100,7 +104,8 @@ struct skbtrace_tracepoint {
 	void (*enable)(struct skbtrace_tracepoint *tp);
 	void (*disable)(struct skbtrace_tracepoint *tp);
 	char *(*desc)(struct skbtrace_tracepoint *tp);
-
+	void (*release_block)(struct skbtrace_tracepoint *tp,
+				struct skbtrace_block **blk);
 	/* if has_mask_option is true */
 	char **mask_names;
 	int *mask_values;
@@ -137,7 +142,7 @@ extern int sysctl_skbtrace_filter_default;
 
 #define INIT_SKBTRACE_BLOCK(blk, p, act, fl, blk_size) \
 	do {\
-		(blk)->magic = 0xDEADBEEF;\
+		(blk)->magic = SKBTRACE_BLOCK_MAGIC;\
 		(blk)->len = (blk_size);\
 		(blk)->action = (act);\
 		(blk)->flags = (fl);\
@@ -145,7 +150,6 @@ extern int sysctl_skbtrace_filter_default;
 		(blk)->ts = current_kernel_time();\
 		(blk)->ptr = (p);\
 	} while (0)
-
 
 struct inet_timewait_sock;
 struct skbtrace_ops {
@@ -161,11 +165,46 @@ struct skbtrace_ops {
 struct skbtrace_context {
 	unsigned long session;
 	struct skbtrace_ops *ops;
-	unsigned int active_conn_hit : 1;
-	struct secondary_table sec_table;
+	union {
+		unsigned int flags;
+		unsigned int active_conn_hit : 1;
+		unsigned int is_skb_context : 1;
+	};
+	union {
+		struct {
+			struct secondary_table *sec_table;
+		};
+
+		struct {
+			struct skbtrace_block *delay_block;
+			void *delay_loc;
+			struct sock *delay_sk;
+			struct timespec delay_ts;
+		} skb;
+	};
+};
+
+struct skbtrace_dyn_block_gate {
+	u64 magic;
+	struct skbtrace_block *blk;
+	struct skbtrace_tracepoint *tp;
 };
 
 extern unsigned long skbtrace_session;
+
+static inline void cond_local_bh_disable(void)
+{
+	if (in_irq() || irqs_disabled())
+		return;
+	local_bh_disable();
+}
+
+static inline void cond_local_bh_enable(void)
+{
+	if (in_irq() || irqs_disabled())
+		return;
+	local_bh_enable();
+}
 
 extern int skbtrace_register_proto(int af,
 				struct skbtrace_tracepoint *tp_list,
@@ -173,10 +212,12 @@ extern int skbtrace_register_proto(int af,
 extern void skbtrace_unregister_proto(int af);
 extern struct skbtrace_ops* skbtrace_ops_get(int af);
 
-extern void __skbtrace_probe(struct skbtrace_tracepoint *tp,
+extern bool __skbtrace_probe(struct skbtrace_tracepoint *tp,
 				struct skbtrace_context *ctx,
 				struct skbtrace_block *blk);
-extern int skbtrace_events_common_init(void);
+extern bool __skbtrace_dyn_probe(struct skbtrace_tracepoint *tp,
+				struct skbtrace_context *ctx,
+				struct skbtrace_block **blk);
 
 extern struct static_key skbtrace_filters_enabled;
 extern struct sk_filter *skbtrace_skb_filter;
@@ -191,7 +232,7 @@ static inline void skbtrace_put_sock_filter_skb(struct sk_buff *skb)
 	skb_reset_tail_pointer(skb);
 	skb_reset_transport_header(skb);
 	skb_reset_network_header(skb);
-	local_bh_enable();
+	cond_local_bh_enable();
 }
 extern struct sk_buff* skbtrace_get_twsk_filter_skb(
 					struct inet_timewait_sock *tw);
@@ -204,6 +245,15 @@ static inline void skbtrace_probe(struct skbtrace_tracepoint *t,
 	if (skbtrace_action_invalid == blk->action)
 		return;
 	__skbtrace_probe(t, ctx, blk);
+}
+
+static inline void skbtrace_dyn_probe(struct skbtrace_tracepoint *t,
+				struct skbtrace_context *ctx,
+				struct skbtrace_block **blk)
+{
+	if (skbtrace_action_invalid == (*blk)->action)
+		return;
+	__skbtrace_dyn_probe(t, ctx, blk);
 }
 
 static inline int skbtrace_bypass_skb(struct sk_buff *skb)
@@ -231,6 +281,18 @@ static inline void secondary_buffer_get(struct secondary_buffer *buf)
 static inline void secondary_buffer_put(struct secondary_buffer *buf)
 {
 	if (buf && atomic_dec_and_test(&buf->refcnt)) {
+		int i;
+
+		for (i = 0; i < buf->count; i++) {
+			struct skbtrace_dyn_block_gate *gate;
+
+			if (--buf->offset < 0)
+				buf->offset = SECONDARY_BUFFER_COUNTS - 1;
+			gate = (struct skbtrace_dyn_block_gate *) \
+				&buf->slots[buf->offset * SECONDARY_BUFFER_UNIT];
+			if (SKBTRACE_DYN_BLOCK_MAGIC == gate->magic)
+				gate->tp->release_block(gate->tp, &gate->blk);
+		}
 		free_pages((unsigned long)buf->slots, SECONDARY_BUFFER_ORDER);
 		buf->slots = NULL;
 	}
@@ -281,13 +343,31 @@ static inline void secondary_buffer_destroy(struct secondary_buffer *buf)
 	}
 }
 
+static inline void secondary_table_init(struct secondary_table **table)
+{
+	unsigned int key;
+
+	*table = kmalloc(sizeof(struct secondary_table), GFP_ATOMIC);
+	if (!*table)
+		return;
+
+	spin_lock_init(&(*table)->lock);
+	for (key = 0; key < SECONDARY_TABLE_SIZE; key++)
+		INIT_HLIST_HEAD(&(*table)->table[key]);
+}
+
 static inline struct secondary_buffer* secondary_table_lookup(
-				struct secondary_table *table,
+				struct secondary_table **table,
 				struct skbtrace_tracepoint *tp)
 {
 	unsigned int key;
 	struct secondary_buffer *buffer;
 	struct hlist_node *pos;
+
+	if (!*table)
+		secondary_table_init(table);
+	if (!*table)
+		return NULL;
 
 	key = (47 * tp->action) & SECONDARY_TABLE_MASK;
 	spin_lock_bh(&table->lock);
@@ -305,12 +385,17 @@ unlock:
 }
 
 static inline struct secondary_buffer* secondary_table_lookup_or_create(
-				struct secondary_table *table,
+				struct secondary_table **table,
 				struct skbtrace_tracepoint *tp)
 {
 	unsigned int key;
 	struct secondary_buffer *buffer;
 	struct hlist_node *pos;
+
+	if (!*table)
+		secondary_table_init(table);
+	if (!*table)
+		return NULL;
 
 	key = (47 * tp->action) & SECONDARY_TABLE_MASK;
 	spin_lock_bh(&table->lock);
@@ -329,42 +414,46 @@ unlock:
 	return buffer;
 }
 
-static inline void secondary_table_clean(struct secondary_table *table)
+static inline void secondary_table_clean(struct secondary_table **table)
 {
 	unsigned int key;
 
-	spin_lock_bh(&table->lock);
+	if (!*table)
+		return;
+
+	spin_lock_bh(&(*table)->lock);
 	for (key = 0; key < SECONDARY_TABLE_SIZE; key++) {
-		while (!hlist_empty(&table->table[key])) {
+		while (!hlist_empty(&(*table)->table[key])) {
 			struct secondary_buffer *buffer;
 
-			buffer = container_of(table->table[key].first,
+			buffer = container_of((*table)->table[key].first,
 						struct secondary_buffer, node);
-			hlist_del(table->table[key].first);
+			hlist_del((*table)->table[key].first);
 			secondary_buffer_destroy(buffer);
 		}
 	}
-	spin_unlock_bh(&table->lock);
-}
-
-static inline void secondary_table_init(struct secondary_table *table)
-{
-	unsigned int key;
-
-	spin_lock_init(&table->lock);
-	for (key = 0; key < SECONDARY_TABLE_SIZE; key++)
-		INIT_HLIST_HEAD(&table->table[key]);
+	spin_unlock_bh(&(*table)->lock);
+	kfree(*table);
+	*table = NULL;
 }
 
 extern struct skbtrace_context *skbtrace_context_get(struct sock *sk);
-extern void skbtrace_context_setup(struct skbtrace_context *ctx,
+extern struct skbtrace_context *skbtrace_skb_context_get(struct sk_buff *skb);
+extern struct skbtrace_context *skbtrace_context_new(
+					bool is_skb_context,
+					int gfp,
 					struct skbtrace_ops *ops);
 
 static inline void skbtrace_context_destroy(struct skbtrace_context **ctx)
 {
 	if (!*ctx)
 		return;
-	secondary_table_clean(&(*ctx)->sec_table);
+	if (!(*ctx)->is_skb_context) {
+		secondary_table_clean(&(*ctx)->sec_table);
+	} else {
+		kfree((*ctx)->skb.delay_block);
+		(*ctx)->skb.delay_block = NULL;
+	}
 	kfree(*ctx);
 	*ctx = NULL;
 }
@@ -402,24 +491,16 @@ static inline void* skbtrace_block_get(struct skbtrace_tracepoint *tp,
 		return fast;
 
 	pri = tp->primary;
-	if (ctx) { /* use secondary buffer of current socket first */
+	if (ctx && !ctx->is_skb_context && ctx->sec_table) {
+		/* use secondary buffer of current socket first */
 		struct secondary_buffer *buf;
-		struct secondary_table *table;
 
-		table = &ctx->sec_table;
-		buf = secondary_table_lookup_or_create(table, pri);
+		buf = secondary_table_lookup_or_create(&ctx->sec_table, pri);
 		if (!buf)
 			return fast;
 		return secondary_buffer_get_block(buf, pri) ? : fast;
 	}
 	return secondary_buffer_get_block(&pri->sec_buffer, pri) ? : fast;
-}
-
-static inline void* skbtrace_block_sk_get(struct skbtrace_tracepoint *tp,
-					struct sock *sk,
-					void *fast)
-{
-	return skbtrace_block_get(tp, skbtrace_context_get(sk), fast);
 }
 
 #define SKBTRACE_SKB_EVENT_BEGIN \

@@ -16,6 +16,7 @@
 #include <linux/jiffies.h>
 #include <net/neighbour.h>
 #include <asm/processor.h>
+#include <trace/events/skbtrace_common.h>
 
 #define DST_GC_MIN	(HZ/10)
 #define DST_GC_INC	(HZ/2)
@@ -446,12 +447,14 @@ static inline void dst_set_expires(struct dst_entry *dst, int timeout)
 /* Output packet to network from transport.  */
 static inline int dst_output(struct sk_buff *skb)
 {
+	trace_skb_delay(skb, skbtrace_skb_delay_append);
 	return skb_dst(skb)->output(skb);
 }
 
 /* Input packet from network to transport.  */
 static inline int dst_input(struct sk_buff *skb)
 {
+	trace_skb_delay(skb, skbtrace_skb_delay_append);
 	return skb_dst(skb)->input(skb);
 }
 

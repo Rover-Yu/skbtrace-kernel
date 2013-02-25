@@ -43,6 +43,9 @@
 #define SKBTRACE_MAX_SUBBUF_SIZE	(1<<16)
 #define SKBTRACE_MAX_SUBBUF_NR		(1<<20)
 
+/* echo -n skbtrace | md5sum - | last_8_bytes */
+#define SKBTRACE_BLOCK_MAGIC		0x56a52f2350abae57
+
 #define SC	0	/* for tracepoints in process context */
 #define SI	1	/* for tracepoints in softirq context */
 #define HW	2	/* for tracepoints in hardirq context */

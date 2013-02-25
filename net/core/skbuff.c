@@ -71,6 +71,7 @@
 #include <trace/events/skb.h>
 #include <linux/highmem.h>
 #include <linux/skbtrace.h>
+#include <trace/events/skbtrace_common.h>
 
 struct kmem_cache *skbuff_head_cache __read_mostly;
 static struct kmem_cache *skbuff_fclone_cache __read_mostly;
@@ -282,6 +283,7 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 		child->fclone = SKB_FCLONE_UNAVAILABLE;
 		child->pfmemalloc = pfmemalloc;
 	}
+	trace_skb_delay(skb, skbtrace_skb_delay_reset);
 out:
 	return skb;
 nodata:
@@ -339,6 +341,7 @@ struct sk_buff *build_skb(void *data, unsigned int frag_size)
 	atomic_set(&shinfo->dataref, 1);
 	kmemcheck_annotate_variable(shinfo->destructor_arg);
 
+	trace_skb_delay(skb, skbtrace_skb_delay_reset);
 	return skb;
 }
 EXPORT_SYMBOL(build_skb);
@@ -593,6 +596,7 @@ static void skb_release_head_state(struct sk_buff *skb)
 	skb->tc_verd = 0;
 #endif
 #endif
+	skbtrace_context_destroy(&skb->skbtrace);
 }
 
 /* Free everything but the sk_buff shell. */
@@ -613,6 +617,7 @@ static void skb_release_all(struct sk_buff *skb)
 
 void __kfree_skb(struct sk_buff *skb)
 {
+	trace_skb_delay(skb, skbtrace_skb_delay_last);
 	skb_release_all(skb);
 	kfree_skbmem(skb);
 }
@@ -696,7 +701,8 @@ static void __copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 	new->encapsulation	= old->encapsulation;
 #if HAVE_SKBTRACE
 	new->hit_skbtrace	= old->hit_skbtrace;
-	new->skbtrace_filtered	= old->skbtrace_filtered;
+	new->skbtrace_filtered = old->skbtrace_filtered;
+	new->skbtrace		= NULL;
 #endif
 #ifdef CONFIG_XFRM
 	new->sp			= secpath_get(old->sp);
@@ -760,6 +766,7 @@ static struct sk_buff *__skb_clone(struct sk_buff *n, struct sk_buff *skb)
 	atomic_inc(&(skb_shinfo(skb)->dataref));
 	skb->cloned = 1;
 
+	trace_skb_delay(n, skbtrace_skb_delay_reset);
 	return n;
 #undef C
 }

@@ -3840,9 +3840,10 @@ static gro_result_t napi_skb_finish(gro_result_t ret, struct sk_buff *skb)
 		break;
 
 	case GRO_MERGED_FREE:
-		if (NAPI_GRO_CB(skb)->free == NAPI_GRO_FREE_STOLEN_HEAD)
+		if (NAPI_GRO_CB(skb)->free == NAPI_GRO_FREE_STOLEN_HEAD) {
+			trace_skb_delay(skb, skbtrace_skb_delay_last);
 			kmem_cache_free(skbuff_head_cache, skb);
-		else
+		} else
 			__kfree_skb(skb);
 		break;
 
@@ -3874,7 +3875,7 @@ static void skb_gro_reset_offset(struct sk_buff *skb)
 gro_result_t napi_gro_receive(struct napi_struct *napi, struct sk_buff *skb)
 {
 	skb_gro_reset_offset(skb);
-
+	trace_skb_delay(skb, skbtrace_skb_delay_append);
 	return napi_skb_finish(dev_gro_receive(napi, skb), skb);
 }
 EXPORT_SYMBOL(napi_gro_receive);

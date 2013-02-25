@@ -33,6 +33,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/netdev_features.h>
 
+#include <trace/events/skbtrace_common.h>
+
 /* Don't change this without changing skb_csum_unnecessary! */
 #define CHECKSUM_NONE 0
 #define CHECKSUM_UNNECESSARY 1
@@ -331,6 +333,8 @@ typedef unsigned char *sk_buff_data_t;
 #define NET_SKBUFF_NF_DEFRAG_NEEDED 1
 #endif
 
+struct skbtrace_context;
+
 /** 
  *	struct sk_buff - socket buffer
  *	@next: Next buffer in list
@@ -493,6 +497,10 @@ struct sk_buff {
 	__u8			skbtrace_filtered:1;
 #endif
 	kmemcheck_bitfield_end(flags2);
+
+#if defined(CONFIG_SKBTRACE) || defined(CONFIG_SKBTRACE_MODULE)
+	struct skbtrace_context *skbtrace;
+#endif
 
 #ifdef CONFIG_NET_DMA
 	dma_cookie_t		dma_cookie;
@@ -1136,6 +1144,7 @@ static inline void __skb_queue_after(struct sk_buff_head *list,
 				     struct sk_buff *prev,
 				     struct sk_buff *newsk)
 {
+	trace_skb_delay(newsk, skbtrace_skb_delay_append);
 	__skb_insert(newsk, prev, prev->next, list);
 }
 
@@ -1146,6 +1155,7 @@ static inline void __skb_queue_before(struct sk_buff_head *list,
 				      struct sk_buff *next,
 				      struct sk_buff *newsk)
 {
+	trace_skb_delay(newsk, skbtrace_skb_delay_append);
 	__skb_insert(newsk, next->prev, next, list);
 }
 

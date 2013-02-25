@@ -38,4 +38,14 @@ DECLARE_TRACE(sk_timer,
 	TP_PROTO(void *sk, struct timer_list *timer, int action),
 	TP_ARGS(sk, timer, action));
 
+typedef enum {
+	skbtrace_skb_delay_reset	= 0,
+	skbtrace_skb_delay_append	= 1,
+	skbtrace_skb_delay_last		= 2,
+} skb_delay_op;
+
+DECLARE_TRACE(skb_delay,
+	TP_PROTO(struct sk_buff *skb, skb_delay_op action),
+	TP_ARGS(skb, action));
+
 #endif

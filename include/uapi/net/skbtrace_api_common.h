@@ -30,6 +30,7 @@ enum {
 	skbtrace_action_common_min	= 1,
 	skbtrace_action_skb_rps_info	= 1,
 	skbtrace_action_sk_timer	= 2,
+	skbtrace_action_skb_delay	= 3,
 	skbtrace_action_common_max	= 99,
 };
 
@@ -69,4 +70,28 @@ struct skbtrace_sk_timer_blk {
 	__s32	timeout;
 } __packed;
 
+/* sk_buff delay history */
+/* flags */
+/* It does not have an inbound or outbound flag bit here, if so,
+ * how we can handle it in loopback traffic? A solution is to
+ * detect tx/rx direction by symbol lookup for location field
+ * of delay history.
+ */
+enum {
+	skbtrace_skb_delay_overflow	= 0,
+	skbtrace_skb_delay_error	= 1,
+};
+
+struct skbtrace_skb_delay {
+	__u64 loc;
+	__u64 delay; /* in microseconds */
+};
+
+struct skbtrace_skb_delay_blk {
+	struct skbtrace_block blk;
+	__u64  sk;
+	__u64  start_loc;
+	struct timespec start_ts;
+	struct skbtrace_skb_delay history[1];
+} __packed;
 #endif

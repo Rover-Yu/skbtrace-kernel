@@ -134,9 +134,9 @@ void __skbtrace_block_probe(struct skbtrace_block *blk)
 	if (unlikely(chan_id >= HW))
 		relay_write(rchan, blk, blk->len);
 	else {
-		local_bh_disable();
+		cond_local_bh_disable();
 		__relay_write(rchan, blk, blk->len);
-		local_bh_enable();
+		cond_local_bh_enable();
 	}
 	blk->action = skbtrace_action_invalid;
 }
@@ -146,10 +146,9 @@ void __skbtrace_do_probe(struct skbtrace_tracepoint *tp,
 				struct skbtrace_block *blk)
 {
 	int i;
-	char *sec_blk;
 	struct secondary_buffer *buf;
 
-	if (ctx)
+	if (ctx && !ctx->is_skb_context && ctx->sec_table)
 		buf = secondary_table_lookup(&ctx->sec_table, tp);
 	else
 		buf = &tp->sec_buffer;
@@ -162,10 +161,20 @@ void __skbtrace_do_probe(struct skbtrace_tracepoint *tp,
 
 	spin_lock_bh(&buf->lock);
 	for (i = 0; i < buf->count; i++) {
+		struct skbtrace_block *sec_blk;
 		if (--buf->offset < 0)
 			buf->offset = SECONDARY_BUFFER_COUNTS - 1;
-		sec_blk = &buf->slots[buf->offset * SECONDARY_BUFFER_UNIT];
-		__skbtrace_block_probe((struct skbtrace_block*)sec_blk);
+		sec_blk = (struct skbtrace_block *)\
+			&buf->slots[buf->offset * SECONDARY_BUFFER_UNIT];
+		if (SKBTRACE_DYN_BLOCK_MAGIC == sec_blk->magic) {
+			struct skbtrace_dyn_block_gate *gate;
+
+			gate = (struct skbtrace_dyn_block_gate*)sec_blk;
+			gate->blk->magic = SKBTRACE_BLOCK_MAGIC;
+			__skbtrace_block_probe(gate->blk);
+			gate->tp->release_block(gate->tp, &gate->blk);
+		} else
+			__skbtrace_block_probe((struct skbtrace_block*)sec_blk);
 	}
 	secondary_buffer_reset(buf);
 	spin_unlock_bh(&buf->lock);
@@ -174,16 +183,84 @@ quit:
 	__skbtrace_block_probe(blk);
 }
 
-void __skbtrace_probe(struct skbtrace_tracepoint *tp,
+bool __skbtrace_probe(struct skbtrace_tracepoint *tp,
 				struct skbtrace_context *ctx,
 				struct skbtrace_block *blk)
 {
-	if (!tp)
-		return;
-	if (!tp->primary)
-		__skbtrace_do_probe(tp, ctx, blk);
+	if (!tp || tp->primary)
+		return false;
+	__skbtrace_do_probe(tp, ctx, blk);
+	return true;
 }
 EXPORT_SYMBOL_GPL(__skbtrace_probe);
+
+static inline void* secondary_buffer_install_dyn_block(
+					struct skbtrace_tracepoint *tp,
+					struct secondary_buffer *buf,
+					struct skbtrace_block *blk)
+{
+	struct skbtrace_dyn_block_gate *gate;
+
+	if (!buf->slots && secondary_buffer_init(buf, tp->primary))
+		return false;
+
+	spin_lock_bh(&buf->lock);
+	gate = (struct skbtrace_dyn_block_gate*)
+			&buf->slots[buf->offset * SECONDARY_BUFFER_UNIT];
+	if (buf->count < SECONDARY_BUFFER_COUNTS)
+		buf->count++;
+	if (++buf->offset >= SECONDARY_BUFFER_COUNTS)
+		buf->offset = 0;
+	spin_unlock_bh(&buf->lock);
+
+	gate->magic = SKBTRACE_DYN_BLOCK_MAGIC;
+	gate->blk = blk;
+	gate->tp = tp;
+	return gate;
+}
+
+static bool skbtrace_dyn_block_install(struct skbtrace_tracepoint *tp,
+				struct skbtrace_context *ctx,
+				struct skbtrace_block *blk)
+{
+	struct skbtrace_tracepoint *pri;
+
+	pri = tp->primary;
+	if (ctx && !ctx->is_skb_context && ctx->sec_table) {
+		/* use secondary buffer of current socket first */
+		struct secondary_buffer *buf;
+
+		buf = secondary_table_lookup_or_create(&ctx->sec_table, pri);
+		if (!buf)
+			return false;
+		return secondary_buffer_install_dyn_block(tp, buf, blk);
+	}
+	return secondary_buffer_install_dyn_block(tp, &pri->sec_buffer, blk);
+}
+
+bool __skbtrace_dyn_probe(struct skbtrace_tracepoint *tp,
+				struct skbtrace_context *ctx,
+				struct skbtrace_block **blk)
+{
+	if (__skbtrace_probe(tp, ctx, *blk)) {
+		tp->release_block(tp, blk);
+		return true;
+	}
+	if (!tp) {
+		tp->release_block(tp, blk);
+		return false;
+	}
+	/* a dynamic allocated secondary block here */
+	if (SKBTRACE_DYN_BLOCK_MAGIC == (*blk)->magic)
+		/* it already was inserted into secondary buffer ago */
+		return false;
+	if (skbtrace_dyn_block_install(tp, ctx, *blk))
+		(*blk)->magic = SKBTRACE_DYN_BLOCK_MAGIC;
+	else
+		tp->release_block(tp, blk);
+	return false;
+}
+EXPORT_SYMBOL_GPL(__skbtrace_dyn_probe);
 
 static void __skbtrace_setup_tracepoints(struct skbtrace_tracepoint *tp_list)
 {
@@ -299,41 +376,57 @@ void skbtrace_unregister_proto(int af)
 }
 EXPORT_SYMBOL_GPL(skbtrace_unregister_proto);
 
-void skbtrace_context_setup(struct skbtrace_context *ctx,
-				struct skbtrace_ops *ops)
+struct skbtrace_context *skbtrace_context_new(bool is_skb_context,
+							int gfp,
+					struct skbtrace_ops *ops)
 {
-	ctx->ops = ops;
+	struct skbtrace_context *ctx;
+
+	ctx = kmalloc(sizeof(struct skbtrace_context), gfp);
+	if (!ctx)
+		return NULL;
 	ctx->session = skbtrace_session;
-	secondary_table_init(&ctx->sec_table);
+	ctx->ops = ops;
+	ctx->flags = 0U;
+	ctx->is_skb_context = is_skb_context;
+	if (is_skb_context)
+		memset(&ctx->skb, 0, sizeof(ctx->skb));
+	else
+		ctx->sec_table = NULL;
+	return ctx;
 }
-EXPORT_SYMBOL(skbtrace_context_setup);
+EXPORT_SYMBOL(skbtrace_context_new);
 
 struct skbtrace_context *skbtrace_context_get(struct sock *sk)
 {
 	struct skbtrace_ops *ops;
-	struct skbtrace_context *ctx;
 
-	ops = skbtrace_ops_get(sk->sk_family);
-	if (!ops)
-		return NULL;
-	local_bh_disable();
-
+	cond_local_bh_disable();
 	if (sk->sk_skbtrace &&
 			(skbtrace_session != sk->sk_skbtrace->session))
 		skbtrace_context_destroy(&sk->sk_skbtrace);
+	ops = skbtrace_ops_get(sk->sk_family);
+	if (ops && !sk->sk_skbtrace)
+		sk->sk_skbtrace = skbtrace_context_new(false, GFP_ATOMIC, ops);
 
-	if (!sk->sk_skbtrace) {
-		ctx = kzalloc(sizeof(struct skbtrace_context), GFP_ATOMIC);
-		if (likely(ctx)) {
-			skbtrace_context_setup(ctx, ops);
-			sk->sk_skbtrace = ctx;
-		}
-	}
-
-	local_bh_enable();
+	cond_local_bh_enable();
 	return sk->sk_skbtrace;
 }
 EXPORT_SYMBOL(skbtrace_context_get);
+
+struct skbtrace_context *skbtrace_skb_context_get(struct sk_buff *skb)
+{
+	cond_local_bh_disable();
+
+	if (skb->skbtrace && (skbtrace_session != skb->skbtrace->session))
+		skbtrace_context_destroy(&skb->skbtrace);
+	if (!skb->skbtrace)
+		skb->skbtrace = skbtrace_context_new(true, GFP_ATOMIC, NULL);
+
+	cond_local_bh_enable();
+	return skb->skbtrace;
+}
+EXPORT_SYMBOL(skbtrace_skb_context_get);
 
 static int subbuf_start_handler(struct rchan_buf *buf,
 				void *subbuf,
@@ -1154,11 +1247,11 @@ struct sk_buff* skbtrace_get_sock_filter_skb(struct sock *sk)
 	int ret;
 	struct skbtrace_ops *ops;
 
-	local_bh_disable();
+	cond_local_bh_disable();
 
 	ops = skbtrace_ops_get(sk->sk_family);
 	if (!ops || !ops->filter_skb) {
-		local_bh_enable();
+		cond_local_bh_enable();
 		return NULL;
 	}
 
@@ -1167,7 +1260,7 @@ struct sk_buff* skbtrace_get_sock_filter_skb(struct sock *sk)
 	if (unlikely(!*p_skb)) {
 		*p_skb = alloc_skb(1500, GFP_ATOMIC);
 		if (!*p_skb) {
-			local_bh_enable();
+			cond_local_bh_enable();
 			return NULL;
 		}
 	}

@@ -42,21 +42,16 @@ static struct skbtrace_context *skbtrace_context_twsk_get(
 	ops = skbtrace_ops_get(tw->tw_family);
 	if (!ops)
 		return NULL;
-	local_bh_disable();
+	cond_local_bh_disable();
 
-	if (tw->tw_skbtrace &&
-			(skbtrace_session != tw->tw_skbtrace->session)) {
+	ctx = tw->tw_skbtrace;
+	if (ctx && (skbtrace_session != ctx->session))
 		skbtrace_context_destroy(&tw->tw_skbtrace);
-	}
 
-	if (!tw->tw_skbtrace) {
-		ctx = kzalloc(sizeof(struct skbtrace_context), GFP_ATOMIC);
-		if (likely(ctx)) {
-			skbtrace_context_setup(ctx, ops);
-			tw->tw_skbtrace = ctx;
-		}
-	}
-	local_bh_enable();
+	if (!tw->tw_skbtrace)
+		tw->tw_skbtrace = skbtrace_context_new(true, GFP_ATOMIC, ops);
+
+	cond_local_bh_enable();
 	return tw->tw_skbtrace;
 }
 EXPORT_SYMBOL(skbtrace_context_twsk_get);
@@ -173,11 +168,11 @@ struct sk_buff* skbtrace_get_twsk_filter_skb(struct inet_timewait_sock *tw)
 	int ret;
 	struct skbtrace_ops *ops;
 
-	local_bh_disable();
+	cond_local_bh_disable();
 
 	ops = skbtrace_ops_get(tw->tw_family);
 	if (!ops || !ops->filter_skb) {
-		local_bh_enable();
+		cond_local_bh_enable();
 		return NULL;
 	}
 
@@ -186,7 +181,7 @@ struct sk_buff* skbtrace_get_twsk_filter_skb(struct inet_timewait_sock *tw)
 	if (unlikely(!*p_skb)) {
 		*p_skb = alloc_skb(1500, GFP_ATOMIC);
 		if (!*p_skb) {
-			local_bh_enable();
+			cond_local_bh_enable();
 			return NULL;
 		}
 	}

@@ -309,10 +309,9 @@ int skb_copy_datagram_iovec(const struct sk_buff *skb, int offset,
 			    struct iovec *to, int len)
 {
 	int start = skb_headlen(skb);
-	int i, copy = start - offset;
+	int i, i_len = len, copy = start - offset;
 	struct sk_buff *frag_iter;
-
-	trace_skb_copy_datagram_iovec(skb, len);
+	int ret = 0;
 
 	/* Copy header. */
 	if (copy > 0) {
@@ -321,7 +320,7 @@ int skb_copy_datagram_iovec(const struct sk_buff *skb, int offset,
 		if (memcpy_toiovec(to, skb->data + offset, copy))
 			goto fault;
 		if ((len -= copy) == 0)
-			return 0;
+			goto quit;
 		offset += copy;
 	}
 
@@ -347,7 +346,7 @@ int skb_copy_datagram_iovec(const struct sk_buff *skb, int offset,
 			if (err)
 				goto fault;
 			if (!(len -= copy))
-				return 0;
+				goto quit;
 			offset += copy;
 		}
 		start = end;
@@ -367,16 +366,21 @@ int skb_copy_datagram_iovec(const struct sk_buff *skb, int offset,
 						    to, copy))
 				goto fault;
 			if ((len -= copy) == 0)
-				return 0;
+				goto quit;
 			offset += copy;
 		}
 		start = end;
 	}
-	if (!len)
-		return 0;
 
+	if (!len) {
+quit:
+		trace_skb_copy_datagram_iovec(skb, i_len);
+		return ret;
+	} else {
 fault:
-	return -EFAULT;
+		ret = -EFAULT;
+		goto quit;
+	}
 }
 EXPORT_SYMBOL(skb_copy_datagram_iovec);
 

@@ -45,6 +45,7 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(napi_poll);
 
 NEW_SKBTRACE_TP(skb_rps_info);
 NEW_SKBTRACE_TP(sk_timer);
+NEW_SKBTRACE_TP(skb_delay);
 
 NEW_SKBTRACE_TP(tcp_congestion);
 NEW_SKBTRACE_TP(tcp_connection);

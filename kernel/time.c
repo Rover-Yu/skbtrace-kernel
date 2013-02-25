@@ -364,6 +364,7 @@ void set_normalized_timespec(struct timespec *ts, time_t sec, s64 nsec)
 		--sec;
 	}
 	ts->tv_sec = sec;
+
 	ts->tv_nsec = nsec;
 }
 EXPORT_SYMBOL(set_normalized_timespec);
